@@ -196,6 +196,9 @@ export default function Home() {
       controls.dampingFactor = 0.06;
       controls.minDistance = 4;
       controls.maxDistance = 40;
+      controls.target.set(0, 0, 0);
+      camera.lookAt(0, 0, 0);
+      controls.update();
 
       const onResize = () => {
         camera.aspect = innerWidth / innerHeight;
@@ -325,8 +328,13 @@ export default function Home() {
             depthWrite:     false,
           });
 
+          // Compute bounds so frustum culling works correctly
+          geo.computeBoundingBox();
+          geo.computeBoundingSphere();
+
           if (particleSystem) scene.remove(particleSystem);
           particleSystem = new THREE.Points(geo, mat);
+          particleSystem.frustumCulled = false; // disable culling — bounds can be stale after shader displacement
           scene.add(particleSystem);
 
           setDetail("Ready!");
