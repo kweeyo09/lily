@@ -2,13 +2,11 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { MeshSurfaceSampler } from "three/addons/math/MeshSurfaceSampler.js";
-import * as BufferGeometryUtils from "three/addons/utils/BufferGeometryUtils.js";
 
 /* ─────────────────────────────────────────────────────────────
-   百合 · Lily Particle Bloom  (three@0.183 compatible)
-   Design: deep-ink background, texture-sampled particle colours,
-   subtle glow, noise float, scatter/gather, MediaPipe gestures.
+   百合 · Lily Particle Bloom  (three@0.183)
+   Colour strategy: manual barycentric UV interpolation per triangle
+   so each particle gets the real texture colour from the lily mesh.
 ───────────────────────────────────────────────────────────── */
 
 declare global {
@@ -19,16 +17,15 @@ declare global {
 }
 
 /* ── CONFIG ─────────────────────────────────────────────────── */
-const N_PARTICLES  = 60_000;
-const MODEL_SCALE  = 8;          // world-units tall
+const N_PARTICLES  = 55_000;
+const MODEL_SCALE  = 8;
 const SCATTER_R    = 14;
-const FLOAT_AMP    = 0.06;
-const FLOAT_SPD    = 0.45;
+const FLOAT_AMP    = 0.055;
+const FLOAT_SPD    = 0.40;
 const ROT_SPD      = 0.0012;
 const LERP_GATHER  = 0.045;
 const LERP_SCATTER = 0.028;
-// point size: world-space radius that maps to pixels via projection
-const POINT_WS     = 0.055;      // world-space radius of each particle
+const POINT_WS     = 0.055;
 
 /* ── VERTEX SHADER ──────────────────────────────────────────── */
 const VERT = /* glsl */`
@@ -56,12 +53,10 @@ float noise3(vec3 p){
 }
 
 void main(){
-  /* smooth-step ease on progress */
   float ep = uProgress < 0.5
     ? 2.0*uProgress*uProgress
     : 1.0 - pow(-2.0*uProgress+2.0,2.0)*0.5;
 
-  /* noise float (only when gathered) */
   float ft = uTime * ${FLOAT_SPD.toFixed(3)} + aPhase;
   float fa = ${FLOAT_AMP.toFixed(3)} * (1.0 - ep);
   vec3 fl  = vec3(
@@ -72,23 +67,15 @@ void main(){
 
   vec3 pos = aOrigin + fl + aScatter * ep;
 
-  /* alpha: full when gathered, fades out when scattered */
-  float baseA = 0.82 + 0.18 * noise3(aOrigin*1.3 + ft*0.25);
-  vAlpha = mix(baseA, 1.0 - ep * 0.9, ep);
+  float baseA = 0.80 + 0.20 * noise3(aOrigin*1.3 + ft*0.25);
+  vAlpha = mix(baseA, 1.0 - ep * 0.92, ep);
 
-  /* colour: texture colour, slight cool drift on scatter */
-  vColor = mix(aColor, aColor*0.82 + vec3(0.04,0.07,0.14), ep*0.4);
+  /* preserve texture colour — only very slight cool drift on scatter */
+  vColor = mix(aColor, aColor * 0.85 + vec3(0.02,0.03,0.08), ep * 0.35);
 
-  /* ── point size ──────────────────────────────────────────
-     Project a world-space sphere of radius POINT_WS to pixels.
-     Formula: pixelSize = (POINT_WS / -mv.z) * projectionMatrix[1][1] * viewportH
-     We bake viewportH into the uniform via uVpH.
-  ─────────────────────────────────────────────────────────── */
-  float szW = ${POINT_WS.toFixed(4)} * aSzMul * (1.0 - ep * 0.45);
+  float szW = ${POINT_WS.toFixed(4)} * aSzMul * (1.0 - ep * 0.40);
   vec4 mv   = modelViewMatrix * vec4(pos, 1.0);
-  /* projectionMatrix[1][1] = 2*near/(top-bottom) ≈ 1/tan(fov/2) */
-  float proj11 = projectionMatrix[1][1];
-  gl_PointSize = max(1.0, szW * proj11 * (800.0 / -mv.z));
+  gl_PointSize = max(1.0, szW * projectionMatrix[1][1] * (800.0 / -mv.z));
   gl_Position  = projectionMatrix * mv;
 }
 `;
@@ -103,40 +90,77 @@ void main(){
   float r = distance(gl_PointCoord, vec2(0.5));
   if(r > 0.5) discard;
 
-  /* soft disc: bright core, dim halo */
-  float core = smoothstep(0.50, 0.04, r);
-  float halo = smoothstep(0.50, 0.22, r) * 0.20;
+  /* soft disc — preserve texture hue, no brightness blowout */
+  float core = smoothstep(0.50, 0.05, r);
+  float halo = smoothstep(0.50, 0.28, r) * 0.10;
   float mask = core + halo;
 
-  /* slight brightness lift at centre — max 1.3× keeps hue */
-  vec3 col = vColor * (0.92 + core * 0.38);
+  /* tiny centre lift (max 1.06×) — keeps hue intact */
+  vec3 col = vColor * (1.0 + core * 0.06);
   gl_FragColor = vec4(col, mask * vAlpha);
 }
 `;
 
-/* ── TEXTURE COLOUR SAMPLER ─────────────────────────────────── */
-interface TexSampler { data: Uint8ClampedArray; w: number; h: number }
+/* ── TEXTURE CANVAS SAMPLER ─────────────────────────────────── */
+interface TexData { data: Uint8ClampedArray; w: number; h: number }
 
-function buildTexSampler(tex: THREE.Texture | null): TexSampler | null {
-  if (!tex?.image) return null;
-  const img = tex.image as HTMLImageElement;
-  const W = Math.min(img.naturalWidth  || img.width  || 512, 512);
-  const H = Math.min(img.naturalHeight || img.height || 512, 512);
+async function buildTexData(tex: THREE.Texture | null): Promise<TexData | null> {
+  if (!tex) return null;
+  const img = tex.image as HTMLImageElement | null;
+  if (!img) return null;
+
+  // Wait for image to load
+  if (!img.complete || img.naturalWidth === 0) {
+    await new Promise<void>(res => {
+      img.onload = () => res();
+      img.onerror = () => res();
+    });
+  }
+  if (img.naturalWidth === 0) return null;
+
+  const W = Math.min(img.naturalWidth, 1024);
+  const H = Math.min(img.naturalHeight, 1024);
   const oc = document.createElement("canvas");
   oc.width = W; oc.height = H;
   const ctx = oc.getContext("2d")!;
-  ctx.drawImage(img, 0, 0, W, H);
-  return { data: ctx.getImageData(0, 0, W, H).data, w: W, h: H };
+
+  try {
+    ctx.drawImage(img, 0, 0, W, H);
+    const data = ctx.getImageData(0, 0, W, H).data;
+    const ci = (Math.floor(H/2)*W + Math.floor(W/2)) * 4;
+    console.log(`[TEX] OK ${W}×${H}  centre=rgb(${data[ci]},${data[ci+1]},${data[ci+2]})`);
+    return { data, w: W, h: H };
+  } catch {
+    // CORS: re-fetch with crossOrigin
+    return new Promise<TexData | null>(res => {
+      const i2 = new Image();
+      i2.crossOrigin = "anonymous";
+      i2.onload = () => {
+        const W2 = Math.min(i2.naturalWidth, 1024), H2 = Math.min(i2.naturalHeight, 1024);
+        const c2 = document.createElement("canvas"); c2.width=W2; c2.height=H2;
+        const x2 = c2.getContext("2d")!;
+        try {
+          x2.drawImage(i2, 0, 0, W2, H2);
+          const d2 = x2.getImageData(0,0,W2,H2).data;
+          const ci2 = (Math.floor(H2/2)*W2+Math.floor(W2/2))*4;
+          console.log(`[TEX-CORS] OK ${W2}×${H2}  centre=rgb(${d2[ci2]},${d2[ci2+1]},${d2[ci2+2]})`);
+          res({ data: d2, w: W2, h: H2 });
+        } catch(e2) { console.warn("[TEX-CORS] fail:", e2); res(null); }
+      };
+      i2.onerror = () => { console.warn("[TEX-CORS] load fail"); res(null); };
+      i2.src = (img as HTMLImageElement).src;
+    });
+  }
 }
 
-function sampleColor(ts: TexSampler | null, u: number, v: number, out: Float32Array, i: number) {
-  if (!ts) { out[i]=0.97; out[i+1]=0.82; out[i+2]=0.85; return; }
-  const px = Math.min(Math.floor(((u%1+1)%1) * ts.w), ts.w-1);
-  const py = Math.min(Math.floor(((1-((v%1+1)%1))) * ts.h), ts.h-1);
-  const j  = (py * ts.w + px) * 4;
-  out[i]   = ts.data[j]   / 255;
-  out[i+1] = ts.data[j+1] / 255;
-  out[i+2] = ts.data[j+2] / 255;
+function sampleTex(td: TexData, u: number, v: number): [number,number,number] {
+  // Clamp/wrap UV
+  const uu = ((u % 1) + 1) % 1;
+  const vv = 1 - ((v % 1) + 1) % 1;  // flip V (WebGL vs canvas)
+  const px = Math.min(Math.floor(uu * td.w), td.w - 1);
+  const py = Math.min(Math.floor(vv * td.h), td.h - 1);
+  const j  = (py * td.w + px) * 4;
+  return [td.data[j]/255, td.data[j+1]/255, td.data[j+2]/255];
 }
 
 /* ── SCRIPT LOADER ──────────────────────────────────────────── */
@@ -146,9 +170,153 @@ function addScript(src: string): Promise<void> {
     const s = document.createElement("script");
     s.src = src; s.crossOrigin = "anonymous";
     s.onload = () => res();
-    s.onerror = () => rej(new Error(`Script failed: ${src}`));
+    s.onerror = () => rej(new Error(`Script load failed: ${src}`));
     document.head.appendChild(s);
   });
+}
+
+/* ── BARYCENTRIC PARTICLE SAMPLER ───────────────────────────── */
+/**
+ * Sample N_PARTICLES from a mesh using manual triangle area weighting
+ * and barycentric UV interpolation — gives accurate texture colours.
+ */
+async function buildParticleArrays(
+  meshes: { geo: THREE.BufferGeometry; tex: TexData | null }[]
+): Promise<{
+  posArr: Float32Array; sctArr: Float32Array;
+  phArr: Float32Array;  szArr: Float32Array;
+  colArr: Float32Array;
+}> {
+  const posArr = new Float32Array(N_PARTICLES * 3);
+  const sctArr = new Float32Array(N_PARTICLES * 3);
+  const phArr  = new Float32Array(N_PARTICLES);
+  const szArr  = new Float32Array(N_PARTICLES);
+  const colArr = new Float32Array(N_PARTICLES * 3);
+
+  // Build triangle list across all meshes
+  type Tri = {
+    ax:number; ay:number; az:number;
+    bx:number; by:number; bz:number;
+    cx:number; cy:number; cz:number;
+    au:number; av:number;
+    bu:number; bv:number;
+    cu:number; cv:number;
+    area: number;
+    tex: TexData | null;
+  };
+
+  const tris: Tri[] = [];
+  let totalArea = 0;
+
+  for (const { geo, tex } of meshes) {
+    const pos = geo.attributes.position;
+    const uv  = geo.attributes.uv;
+    const idx = geo.index;
+    const triCount = idx ? idx.count / 3 : pos.count / 3;
+
+    for (let t = 0; t < triCount; t++) {
+      const ia = idx ? idx.getX(t*3)   : t*3;
+      const ib = idx ? idx.getX(t*3+1) : t*3+1;
+      const ic = idx ? idx.getX(t*3+2) : t*3+2;
+
+      const ax=pos.getX(ia), ay=pos.getY(ia), az=pos.getZ(ia);
+      const bx=pos.getX(ib), by=pos.getY(ib), bz=pos.getZ(ib);
+      const cx=pos.getX(ic), cy=pos.getY(ic), cz=pos.getZ(ic);
+
+      // Triangle area via cross product
+      const ex=bx-ax, ey=by-ay, ez=bz-az;
+      const fx=cx-ax, fy=cy-ay, fz=cz-az;
+      const area = 0.5 * Math.sqrt(
+        (ey*fz-ez*fy)**2 + (ez*fx-ex*fz)**2 + (ex*fy-ey*fx)**2
+      );
+      if (area < 1e-10) continue;
+
+      const au = uv ? uv.getX(ia) : 0, av = uv ? uv.getY(ia) : 0;
+      const bu = uv ? uv.getX(ib) : 0, bv = uv ? uv.getY(ib) : 0;
+      const cu = uv ? uv.getX(ic) : 0, cv = uv ? uv.getY(ic) : 0;
+
+      tris.push({ ax,ay,az, bx,by,bz, cx,cy,cz, au,av, bu,bv, cu,cv, area, tex });
+      totalArea += area;
+    }
+  }
+
+  if (tris.length === 0) {
+    console.warn("[SAMPLE] No triangles found — using fallback colours");
+    for (let i = 0; i < N_PARTICLES; i++) {
+      colArr[i*3]=0.85; colArr[i*3+1]=0.42; colArr[i*3+2]=0.55;
+    }
+    return { posArr, sctArr, phArr, szArr, colArr };
+  }
+
+  // Build CDF for area-weighted sampling
+  const cdf = new Float64Array(tris.length);
+  let acc = 0;
+  for (let i = 0; i < tris.length; i++) {
+    acc += tris[i].area / totalArea;
+    cdf[i] = acc;
+  }
+
+  // Sample particles
+  let uvZeroCount = 0;
+  for (let i = 0; i < N_PARTICLES; i++) {
+    // Pick triangle by area weight
+    const r = Math.random();
+    let lo=0, hi=tris.length-1;
+    while (lo < hi) { const mid=(lo+hi)>>1; if (cdf[mid]<r) lo=mid+1; else hi=mid; }
+    const tri = tris[lo];
+
+    // Random barycentric coordinates
+    const r1 = Math.random(), r2 = Math.random();
+    const sqr1 = Math.sqrt(r1);
+    const u1 = 1 - sqr1, u2 = sqr1 * (1 - r2), u3 = sqr1 * r2;
+
+    const px = u1*tri.ax + u2*tri.bx + u3*tri.cx;
+    const py = u1*tri.ay + u2*tri.by + u3*tri.cy;
+    const pz = u1*tri.az + u2*tri.bz + u3*tri.cz;
+
+    posArr[i*3]   = px;
+    posArr[i*3+1] = py;
+    posArr[i*3+2] = pz;
+
+    // Interpolated UV
+    const pu = u1*tri.au + u2*tri.bu + u3*tri.cu;
+    const pv = u1*tri.av + u2*tri.bv + u3*tri.cv;
+
+    if (pu === 0 && pv === 0) uvZeroCount++;
+
+    // Sample texture colour
+    if (tri.tex) {
+      const [r,g,b] = sampleTex(tri.tex, pu, pv);
+      colArr[i*3]=r; colArr[i*3+1]=g; colArr[i*3+2]=b;
+    } else {
+      // Fallback: soft pink
+      colArr[i*3]=0.85; colArr[i*3+1]=0.42; colArr[i*3+2]=0.55;
+    }
+
+    // Scatter direction
+    const len = Math.sqrt(px*px+py*py+pz*pz) || 1;
+    const ox=px/len, oy=py/len, oz=pz/len;
+    const rx=(Math.random()-0.5)*2, ry=(Math.random()-0.5)*2, rz=(Math.random()-0.5)*2;
+    const rl=Math.sqrt(rx*rx+ry*ry+rz*rz)||1;
+    const mix=0.6;
+    const sx=ox*(1-mix)+rx/rl*mix, sy=oy*(1-mix)+ry/rl*mix, sz=oz*(1-mix)+rz/rl*mix;
+    const sl=Math.sqrt(sx*sx+sy*sy+sz*sz)||1;
+    const mag = SCATTER_R * (0.35 + Math.random() * 0.65);
+    sctArr[i*3]=sx/sl*mag; sctArr[i*3+1]=sy/sl*mag; sctArr[i*3+2]=sz/sl*mag;
+
+    phArr[i] = Math.random() * Math.PI * 2;
+    szArr[i] = 0.5 + Math.random() * 1.0;
+  }
+
+  // Diagnostic
+  const sample5 = Array.from({length:5}, (_,k) => {
+    const j=k*3;
+    return `rgb(${(colArr[j]*255).toFixed(0)},${(colArr[j+1]*255).toFixed(0)},${(colArr[j+2]*255).toFixed(0)})`;
+  });
+  console.log(`[SAMPLE] ${tris.length} tris, ${N_PARTICLES} particles, uvZero=${uvZeroCount}`);
+  console.log('[SAMPLE] first 5 colours:', sample5.join('  '));
+
+  return { posArr, sctArr, phArr, szArr, colArr };
 }
 
 /* ── COMPONENT ──────────────────────────────────────────────── */
@@ -158,10 +326,9 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false;
     let rafId = 0;
-    const cleanupRef = { current: null as (() => void) | null };
+    let cleanup: (() => void) | null = null;
 
     (async () => {
-      /* load MediaPipe scripts */
       await addScript("https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js");
       await addScript("https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js");
       await addScript("https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js");
@@ -172,7 +339,7 @@ export default function Home() {
       scene.background = new THREE.Color(0x020208);
 
       const W = window.innerWidth, H = window.innerHeight;
-      const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 500);
+      const camera = new THREE.PerspectiveCamera(45, W/H, 0.1, 500);
       camera.position.set(0, 0, 22);
 
       const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -189,18 +356,14 @@ export default function Home() {
       controls.update();
 
       const onResize = () => {
-        const w = window.innerWidth, h = window.innerHeight;
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-        renderer.setSize(w, h);
+        const w=window.innerWidth, h=window.innerHeight;
+        camera.aspect=w/h; camera.updateProjectionMatrix(); renderer.setSize(w,h);
       };
       window.addEventListener("resize", onResize);
 
-      /* ── STATE ── */
       let particles: THREE.Points | null = null;
       let targetProg = 0, curProg = 0;
 
-      /* ── HELPERS ── */
       const setDetail = (msg: string) => {
         const el = document.getElementById("ld-detail");
         if (el) el.textContent = msg;
@@ -210,92 +373,50 @@ export default function Home() {
       const loader = new GLTFLoader();
       loader.load(
         "https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/baihe_40dd7c52.glb",
-        (gltf) => {
+        async (gltf) => {
           try {
-            setDetail("Extracting geometry…");
-            const geos: THREE.BufferGeometry[] = [];
-            let texMap: THREE.Texture | null = null;
-
+            setDetail("Extracting meshes…");
             gltf.scene.updateMatrixWorld(true);
-            gltf.scene.traverse((child) => {
-              const mesh = child as THREE.Mesh;
-              if (!mesh.isMesh) return;
-              const g = mesh.geometry.clone();
-              g.applyMatrix4(mesh.matrixWorld);
-              /* ensure plain BufferAttribute UVs */
-              if (g.attributes.uv) {
-                const uv = g.attributes.uv;
-                if (!(uv instanceof THREE.BufferAttribute)) {
-                  const arr = new Float32Array(uv.count * 2);
-                  for (let k = 0; k < uv.count; k++) {
-                    arr[k*2] = uv.getX(k); arr[k*2+1] = uv.getY(k);
-                  }
-                  g.setAttribute("uv", new THREE.BufferAttribute(arr, 2));
-                }
-              } else {
-                g.setAttribute("uv", new THREE.BufferAttribute(
-                  new Float32Array(g.attributes.position.count * 2), 2));
-              }
-              geos.push(g);
-              const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
-              const std = mat as THREE.MeshStandardMaterial;
-              if (std?.map && !texMap) { texMap = std.map; texMap.flipY = false; }
+
+            // Scale the whole scene to MODEL_SCALE
+            const box0 = new THREE.Box3().setFromObject(gltf.scene);
+            const sz0  = box0.getSize(new THREE.Vector3());
+            const sc   = MODEL_SCALE / Math.max(sz0.x, sz0.y, sz0.z);
+            gltf.scene.scale.setScalar(sc);
+            gltf.scene.updateMatrixWorld(true);
+
+            // Centre
+            const box1 = new THREE.Box3().setFromObject(gltf.scene);
+            const ctr  = box1.getCenter(new THREE.Vector3());
+            gltf.scene.position.sub(ctr);
+            gltf.scene.updateMatrixWorld(true);
+
+            // Collect meshes with their textures
+            type MeshEntry = { geo: THREE.BufferGeometry; tex: TexData | null };
+            const meshEntries: MeshEntry[] = [];
+
+            const meshNodes: THREE.Mesh[] = [];
+            gltf.scene.traverse(child => {
+              if ((child as THREE.Mesh).isMesh) meshNodes.push(child as THREE.Mesh);
             });
 
-            if (!geos.length) { setDetail("No meshes found!"); return; }
+            setDetail(`Loading textures (${meshNodes.length} meshes)…`);
 
-            setDetail("Merging geometry…");
-            const merged = BufferGeometryUtils.mergeGeometries(geos, false);
-            if (!merged) { setDetail("Merge failed!"); return; }
-            merged.center();
+            for (const mesh of meshNodes) {
+              const g = mesh.geometry.clone();
+              g.applyMatrix4(mesh.matrixWorld);
 
-            /* scale to MODEL_SCALE world-units */
-            const box = new THREE.Box3().setFromObject(new THREE.Mesh(merged));
-            const sz  = box.getSize(new THREE.Vector3());
-            const sc  = MODEL_SCALE / Math.max(sz.x, sz.y, sz.z);
-            merged.scale(sc, sc, sc);
-            merged.computeBoundingBox();
-            merged.computeBoundingSphere();
+              const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+              const std = mat as THREE.MeshStandardMaterial;
+              const rawTex = std?.map ?? null;
 
-            setDetail("Sampling surface…");
-            const tempMesh = new THREE.Mesh(merged);
-            const sampler  = new MeshSurfaceSampler(tempMesh).build();
-            const texSamp  = buildTexSampler(texMap);
-
-            const posArr  = new Float32Array(N_PARTICLES * 3);
-            const sctArr  = new Float32Array(N_PARTICLES * 3);
-            const phArr   = new Float32Array(N_PARTICLES);
-            const szArr   = new Float32Array(N_PARTICLES);
-            const colArr  = new Float32Array(N_PARTICLES * 3);
-
-            const _p = new THREE.Vector3();
-            const _n = new THREE.Vector3();
-            const _uv = new THREE.Vector2();
+              const texData = await buildTexData(rawTex);
+              meshEntries.push({ geo: g, tex: texData });
+            }
 
             setDetail("Generating particles…");
-            for (let i = 0; i < N_PARTICLES; i++) {
-              /* three@0.183 MeshSurfaceSampler.sample(pos, norm, uv) */
-              sampler.sample(_p, _n, _uv as any);
-              posArr[i*3]   = _p.x;
-              posArr[i*3+1] = _p.y;
-              posArr[i*3+2] = _p.z;
-
-              sampleColor(texSamp, _uv.x, _uv.y, colArr, i * 3);
-
-              /* scatter direction: mix outward + random */
-              const out = _p.clone().normalize();
-              const rnd = new THREE.Vector3(
-                Math.random()-0.5, Math.random()-0.5, Math.random()-0.5
-              ).normalize();
-              out.lerp(rnd, 0.6).normalize();
-              const mag = SCATTER_R * (0.35 + Math.random() * 0.65);
-              sctArr[i*3]   = out.x * mag;
-              sctArr[i*3+1] = out.y * mag;
-              sctArr[i*3+2] = out.z * mag;
-
-              phArr[i] = Math.random() * Math.PI * 2;
-              szArr[i] = 0.5 + Math.random() * 1.0;
-            }
+            const { posArr, sctArr, phArr, szArr, colArr } =
+              await buildParticleArrays(meshEntries);
 
             const geo = new THREE.BufferGeometry();
             geo.setAttribute("aOrigin",  new THREE.BufferAttribute(posArr.slice(), 3));
@@ -307,11 +428,8 @@ export default function Home() {
             geo.computeBoundingBox();
             geo.computeBoundingSphere();
 
-            const mat = new THREE.ShaderMaterial({
-              uniforms: {
-                uTime:     { value: 0 },
-                uProgress: { value: 0 },
-              },
+            const mat2 = new THREE.ShaderMaterial({
+              uniforms: { uTime:{value:0}, uProgress:{value:0} },
               vertexShader:   VERT,
               fragmentShader: FRAG,
               transparent:    true,
@@ -320,26 +438,25 @@ export default function Home() {
             });
 
             if (particles) scene.remove(particles);
-            particles = new THREE.Points(geo, mat);
+            particles = new THREE.Points(geo, mat2);
             particles.frustumCulled = false;
             scene.add(particles);
 
             setDetail("Ready!");
             setTimeout(() => {
               const ld = document.getElementById("ld-screen");
-              if (ld) { ld.style.opacity = "0"; setTimeout(() => ld.remove(), 700); }
+              if (ld) { ld.style.opacity="0"; setTimeout(()=>ld.remove(), 700); }
             }, 200);
-            const gl = document.getElementById("g-label");
-            if (gl) gl.textContent = "Show your hand";
+            const gl2 = document.getElementById("g-label");
+            if (gl2) gl2.textContent = "Show your hand";
 
-          } catch (e) {
+          } catch(e) {
             console.error("Particle build error:", e);
             setDetail("Error: " + (e as Error).message);
           }
         },
         (xhr) => {
-          if (xhr.total > 0)
-            setDetail(`Loading model… ${Math.round(xhr.loaded / xhr.total * 100)}%`);
+          if (xhr.total>0) setDetail(`Loading model… ${Math.round(xhr.loaded/xhr.total*100)}%`);
         },
         (err) => { console.error(err); setDetail("Failed to load model."); }
       );
@@ -347,54 +464,52 @@ export default function Home() {
       /* ── MEDIAPIPE ── */
       const videoEl    = document.getElementById("mp-video") as HTMLVideoElement;
       const handCanvas = document.getElementById("hand-canvas") as HTMLCanvasElement;
-      handCanvas.width = 200; handCanvas.height = 150;
+      handCanvas.width=200; handCanvas.height=150;
       const hCtx = handCanvas.getContext("2d")!;
-
       const pill   = document.getElementById("g-pill")!;
       const gIcon  = document.getElementById("g-icon")!;
       const gLabel = document.getElementById("g-label")!;
-      const ringFill = document.getElementById("ring-fill") as unknown as SVGCircleElement | null;
+      const ringFill = document.getElementById("ring-fill") as unknown as SVGCircleElement|null;
       const CIRC = 150.796;
 
-      const d2 = (a: {x:number;y:number}, b: {x:number;y:number}) =>
+      const d2 = (a:{x:number;y:number}, b:{x:number;y:number}) =>
         Math.hypot(a.x-b.x, a.y-b.y);
 
-      const classify = (lm: {x:number;y:number}[]) => {
-        const w = lm[0];
-        let closed = 0;
-        for (const [t, m] of [[8,5],[12,9],[16,13],[20,17]] as [number,number][])
-          if (d2(lm[t], w) < d2(lm[m], w) * 1.15) closed++;
-        if (d2(lm[4], w) < d2(lm[2], w) * 1.1) closed++;
-        return closed >= 3 ? "fist" : "open";
+      const classify = (lm:{x:number;y:number}[]) => {
+        const w=lm[0]; let closed=0;
+        for (const [t,m] of [[8,5],[12,9],[16,13],[20,17]] as [number,number][])
+          if (d2(lm[t],w) < d2(lm[m],w)*1.15) closed++;
+        if (d2(lm[4],w) < d2(lm[2],w)*1.1) closed++;
+        return closed>=3 ? "fist" : "open";
       };
 
-      let lastG = "none", holdF = 0;
-      const HOLD = 4;
+      let lastG="none", holdF=0;
+      const HOLD=4;
 
       const handsMP = new window.Hands({
-        locateFile: (f: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
+        locateFile:(f:string)=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
       });
       handsMP.setOptions({ maxNumHands:1, modelComplexity:1,
         minDetectionConfidence:0.65, minTrackingConfidence:0.60 });
-      handsMP.onResults((res: any) => {
-        hCtx.clearRect(0, 0, 200, 150);
+      handsMP.onResults((res:any) => {
+        hCtx.clearRect(0,0,200,150);
         if (!res.multiHandLandmarks?.length) {
           gIcon.textContent="🌸"; gLabel.textContent="Show your hand";
           pill.className=""; lastG="none"; holdF=0; return;
         }
-        const lm = res.multiHandLandmarks[0];
+        const lm=res.multiHandLandmarks[0];
         hCtx.save(); hCtx.scale(-1,1); hCtx.translate(-200,0);
         if (window.drawConnectors && window.HAND_CONNECTIONS) {
-          window.drawConnectors(hCtx, lm, window.HAND_CONNECTIONS,
-            { color:"rgba(255,140,180,0.55)", lineWidth:1.5, canvasWidth:200, canvasHeight:150 });
-          window.drawLandmarks(hCtx, lm,
-            { color:"rgba(255,255,255,0.75)", lineWidth:1, radius:2, canvasWidth:200, canvasHeight:150 });
+          window.drawConnectors(hCtx,lm,window.HAND_CONNECTIONS,
+            {color:"rgba(255,140,180,0.55)",lineWidth:1.5,canvasWidth:200,canvasHeight:150});
+          window.drawLandmarks(hCtx,lm,
+            {color:"rgba(255,255,255,0.75)",lineWidth:1,radius:2,canvasWidth:200,canvasHeight:150});
         }
         hCtx.restore();
-        const g = classify(lm);
-        if (g === lastG) holdF++; else { holdF=0; lastG=g; }
-        if (holdF >= HOLD) {
-          if (g === "fist") {
+        const g=classify(lm);
+        if (g===lastG) holdF++; else { holdF=0; lastG=g; }
+        if (holdF>=HOLD) {
+          if (g==="fist") {
             targetProg=0; gIcon.textContent="✊"; gLabel.textContent="Gather · 汇聚"; pill.className="gather";
           } else {
             targetProg=1; gIcon.textContent="🖐"; gLabel.textContent="Scatter · 扩散"; pill.className="scatter";
@@ -403,17 +518,17 @@ export default function Home() {
       });
 
       const camFeed = new window.Camera(videoEl, {
-        onFrame: async () => { await handsMP.send({ image: videoEl }); },
-        width: 640, height: 480,
+        onFrame: async()=>{ await handsMP.send({image:videoEl}); },
+        width:640, height:480,
       });
       camFeed.start().catch(console.warn);
 
-      /* ── KEYBOARD SHORTCUT (Space = toggle) ── */
-      const onKey = (e: KeyboardEvent) => {
-        if (e.code === "Space") {
+      /* ── KEYBOARD SHORTCUT ── */
+      const onKey = (e:KeyboardEvent) => {
+        if (e.code==="Space") {
           e.preventDefault();
-          targetProg = targetProg < 0.5 ? 1 : 0;
-          if (targetProg > 0.5) {
+          targetProg = targetProg<0.5 ? 1 : 0;
+          if (targetProg>0.5) {
             gIcon.textContent="🖐"; gLabel.textContent="Scatter · 扩散"; pill.className="scatter";
           } else {
             gIcon.textContent="✊"; gLabel.textContent="Gather · 汇聚"; pill.className="gather";
@@ -425,18 +540,18 @@ export default function Home() {
       /* ── ANIMATION LOOP ── */
       const animate = () => {
         rafId = requestAnimationFrame(animate);
-        const t = performance.now() * 0.001;
+        const t = performance.now()*0.001;
         if (particles) {
-          const spd = targetProg < curProg ? LERP_GATHER : LERP_SCATTER;
-          curProg += (targetProg - curProg) * spd;
+          const spd = targetProg<curProg ? LERP_GATHER : LERP_SCATTER;
+          curProg += (targetProg-curProg)*spd;
           const u = (particles.material as THREE.ShaderMaterial).uniforms;
           u.uTime.value     = t;
           u.uProgress.value = curProg;
           particles.rotation.y += ROT_SPD;
           if (ringFill) {
-            ringFill.setAttribute("stroke-dashoffset", (CIRC * curProg).toFixed(2));
-            const re = document.getElementById("progress-ring");
-            if (re) re.className = targetProg < 0.5 ? "gather" : "";
+            ringFill.setAttribute("stroke-dashoffset", (CIRC*curProg).toFixed(2));
+            const re=document.getElementById("progress-ring");
+            if (re) re.className = targetProg<0.5 ? "gather" : "";
           }
         }
         controls.update();
@@ -444,7 +559,7 @@ export default function Home() {
       };
       animate();
 
-      cleanupRef.current = () => {
+      cleanup = () => {
         cancelAnimationFrame(rafId);
         window.removeEventListener("resize", onResize);
         window.removeEventListener("keydown", onKey);
@@ -454,14 +569,13 @@ export default function Home() {
       };
     })();
 
-    return () => { cancelled = true; cleanupRef.current?.(); };
+    return () => { cancelled=true; cleanup?.(); };
   }, []);
 
   return (
     <div style={{ width:"100vw", height:"100vh", overflow:"hidden",
       background:"#020208", position:"relative", fontFamily:"system-ui,sans-serif" }}>
 
-      {/* Three.js mount */}
       <div ref={mountRef} style={{ position:"absolute", inset:0 }} />
 
       {/* Loading screen */}
@@ -486,7 +600,7 @@ export default function Home() {
           Lily · Particle Bloom</p>
       </div>
 
-      {/* Hint */}
+      {/* Hints */}
       <div style={{ position:"absolute", top:26, left:26, fontSize:10,
         color:"rgba(255,255,255,0.20)", letterSpacing:"0.14em", lineHeight:2.1,
         pointerEvents:"none", zIndex:10 }}>
@@ -548,7 +662,6 @@ export default function Home() {
         #g-pill.gather  { border-color:rgba(120,200,255,0.55)!important; }
         #g-pill.scatter #g-label { color:#f07aaa!important; }
         #g-pill.gather  #g-label { color:#88d4ff!important; }
-        #progress-ring.gather #ring-fill { stroke:#88d4ff!important; }
       `}</style>
     </div>
   );
