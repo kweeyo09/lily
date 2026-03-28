@@ -104,52 +104,51 @@ void main(){
 /* ── TEXTURE CANVAS SAMPLER ─────────────────────────────────── */
 interface TexData { data: Uint8ClampedArray; w: number; h: number }
 
+/**
+ * three@0.183 GLTFLoader stores textures as ImageBitmap (not HTMLImageElement).
+ * We draw it onto a canvas to extract pixel data for UV colour sampling.
+ */
 async function buildTexData(tex: THREE.Texture | null): Promise<TexData | null> {
   if (!tex) return null;
-  const img = tex.image as HTMLImageElement | null;
+  const img = tex.image;
   if (!img) return null;
 
-  // Wait for image to load
-  if (!img.complete || img.naturalWidth === 0) {
-    await new Promise<void>(res => {
-      img.onload = () => res();
-      img.onerror = () => res();
-    });
+  // Determine source dimensions — works for ImageBitmap, HTMLImageElement, HTMLCanvasElement
+  const srcW: number = (img as any).naturalWidth ?? (img as any).width ?? 0;
+  const srcH: number = (img as any).naturalHeight ?? (img as any).height ?? 0;
+  if (srcW === 0 || srcH === 0) {
+    console.warn("[TEX] zero-size image, skipping");
+    return null;
   }
-  if (img.naturalWidth === 0) return null;
 
-  const W = Math.min(img.naturalWidth, 1024);
-  const H = Math.min(img.naturalHeight, 1024);
-  const oc = document.createElement("canvas");
-  oc.width = W; oc.height = H;
-  const ctx = oc.getContext("2d")!;
+  const W = Math.min(srcW, 1024);
+  const H = Math.min(srcH, 1024);
 
   try {
-    ctx.drawImage(img, 0, 0, W, H);
-    const data = ctx.getImageData(0, 0, W, H).data;
-    const ci = (Math.floor(H/2)*W + Math.floor(W/2)) * 4;
-    console.log(`[TEX] OK ${W}×${H}  centre=rgb(${data[ci]},${data[ci+1]},${data[ci+2]})`);
-    return { data, w: W, h: H };
-  } catch {
-    // CORS: re-fetch with crossOrigin
-    return new Promise<TexData | null>(res => {
-      const i2 = new Image();
-      i2.crossOrigin = "anonymous";
-      i2.onload = () => {
-        const W2 = Math.min(i2.naturalWidth, 1024), H2 = Math.min(i2.naturalHeight, 1024);
-        const c2 = document.createElement("canvas"); c2.width=W2; c2.height=H2;
-        const x2 = c2.getContext("2d")!;
-        try {
-          x2.drawImage(i2, 0, 0, W2, H2);
-          const d2 = x2.getImageData(0,0,W2,H2).data;
-          const ci2 = (Math.floor(H2/2)*W2+Math.floor(W2/2))*4;
-          console.log(`[TEX-CORS] OK ${W2}×${H2}  centre=rgb(${d2[ci2]},${d2[ci2+1]},${d2[ci2+2]})`);
-          res({ data: d2, w: W2, h: H2 });
-        } catch(e2) { console.warn("[TEX-CORS] fail:", e2); res(null); }
-      };
-      i2.onerror = () => { console.warn("[TEX-CORS] load fail"); res(null); };
-      i2.src = (img as HTMLImageElement).src;
-    });
+    // Try OffscreenCanvas first (works with ImageBitmap, no CORS issues)
+    if (typeof OffscreenCanvas !== "undefined") {
+      const oc = new OffscreenCanvas(W, H);
+      const ctx = oc.getContext("2d") as OffscreenCanvasRenderingContext2D | null;
+      if (ctx) {
+        ctx.drawImage(img as CanvasImageSource, 0, 0, W, H);
+        const data = ctx.getImageData(0, 0, W, H).data;
+        const ci = (Math.floor(H/2)*W + Math.floor(W/2)) * 4;
+        console.log(`[TEX] OffscreenCanvas ${W}×${H} centre=rgb(${data[ci]},${data[ci+1]},${data[ci+2]})`);
+        return { data, w: W, h: H };
+      }
+    }
+    // Fallback: regular canvas
+    const oc2 = document.createElement("canvas");
+    oc2.width = W; oc2.height = H;
+    const ctx2 = oc2.getContext("2d")!;
+    ctx2.drawImage(img as CanvasImageSource, 0, 0, W, H);
+    const data2 = ctx2.getImageData(0, 0, W, H).data;
+    const ci2 = (Math.floor(H/2)*W + Math.floor(W/2)) * 4;
+    console.log(`[TEX] Canvas ${W}×${H} centre=rgb(${data2[ci2]},${data2[ci2+1]},${data2[ci2+2]})`);
+    return { data: data2, w: W, h: H };
+  } catch (e) {
+    console.warn("[TEX] draw failed:", e);
+    return null;
   }
 }
 
