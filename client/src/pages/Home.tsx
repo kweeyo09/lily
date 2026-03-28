@@ -5,8 +5,16 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 /* ─────────────────────────────────────────────────────────────
    百合 · Lily Particle Bloom  (three@0.183)
-   Colour strategy: manual barycentric UV interpolation per triangle
-   so each particle gets the real texture colour from the lily mesh.
+
+   COLOUR STRATEGY:
+   The GLB is a photogrammetry scan with colours baked into the
+   mesh in one of two ways (we try both, in order):
+     1. geometry.attributes.color  — direct per-vertex RGB
+     2. UV + diffuse texture map   — barycentric UV interpolation
+        drawn onto OffscreenCanvas, then sampled per particle
+
+   This gives the exact colours visible in Blender / the original
+   model, without any brightness multiplication or blending tricks.
 ───────────────────────────────────────────────────────────── */
 
 declare global {
@@ -17,15 +25,15 @@ declare global {
 }
 
 /* ── CONFIG ─────────────────────────────────────────────────── */
-const N_PARTICLES  = 55_000;
-const MODEL_SCALE  = 8;
-const SCATTER_R    = 14;
-const FLOAT_AMP    = 0.055;
-const FLOAT_SPD    = 0.40;
-const ROT_SPD      = 0.0012;
-const LERP_GATHER  = 0.045;
-const LERP_SCATTER = 0.028;
-const POINT_WS     = 0.055;
+const N_PARTICLES  = 60_000;
+const MODEL_SCALE  = 9;
+const SCATTER_R    = 15;
+const FLOAT_AMP    = 0.045;
+const FLOAT_SPD    = 0.35;
+const ROT_SPD      = 0.0010;
+const LERP_GATHER  = 0.048;
+const LERP_SCATTER = 0.026;
+const POINT_WS     = 0.052;
 
 /* ── VERTEX SHADER ──────────────────────────────────────────── */
 const VERT = /* glsl */`
@@ -67,11 +75,11 @@ void main(){
 
   vec3 pos = aOrigin + fl + aScatter * ep;
 
-  float baseA = 0.72 + 0.18 * noise3(aOrigin*1.3 + ft*0.25);
+  float baseA = 0.78 + 0.18 * noise3(aOrigin*1.3 + ft*0.25);
   vAlpha = mix(baseA, 1.0 - ep * 0.95, ep);
 
-  /* preserve texture colour — only very slight cool drift on scatter */
-  vColor = mix(aColor, aColor * 0.85 + vec3(0.02,0.03,0.08), ep * 0.35);
+  /* exact texture colour — faint cool drift only on scatter */
+  vColor = mix(aColor, aColor * 0.82 + vec3(0.01,0.02,0.06), ep * 0.30);
 
   float szW = ${POINT_WS.toFixed(4)} * aSzMul * (1.0 - ep * 0.40);
   vec4 mv   = modelViewMatrix * vec4(pos, 1.0);
@@ -90,41 +98,31 @@ void main(){
   float r = distance(gl_PointCoord, vec2(0.5));
   if(r > 0.5) discard;
 
-  /* Soft disc with NO brightness lift — pure texture colour */
-  float core = smoothstep(0.50, 0.10, r);       /* solid filled disc */
-  float edge = smoothstep(0.50, 0.35, r) * 0.25; /* very faint halo */
+  /* Soft disc — no brightness multiplication, pure sampled colour */
+  float core = smoothstep(0.50, 0.08, r);
+  float edge = smoothstep(0.50, 0.32, r) * 0.18;
   float mask = core + edge;
 
-  /* No brightness multiplication — colour stays exactly as sampled */
-  gl_FragColor = vec4(vColor, mask * vAlpha * 0.88);
+  gl_FragColor = vec4(vColor, mask * vAlpha);
 }
 `;
 
 /* ── TEXTURE CANVAS SAMPLER ─────────────────────────────────── */
 interface TexData { data: Uint8ClampedArray; w: number; h: number }
 
-/**
- * three@0.183 GLTFLoader stores textures as ImageBitmap (not HTMLImageElement).
- * We draw it onto a canvas to extract pixel data for UV colour sampling.
- */
 async function buildTexData(tex: THREE.Texture | null): Promise<TexData | null> {
   if (!tex) return null;
   const img = tex.image;
   if (!img) return null;
 
-  // Determine source dimensions — works for ImageBitmap, HTMLImageElement, HTMLCanvasElement
   const srcW: number = (img as any).naturalWidth ?? (img as any).width ?? 0;
   const srcH: number = (img as any).naturalHeight ?? (img as any).height ?? 0;
-  if (srcW === 0 || srcH === 0) {
-    console.warn("[TEX] zero-size image, skipping");
-    return null;
-  }
+  if (srcW === 0 || srcH === 0) return null;
 
   const W = Math.min(srcW, 1024);
   const H = Math.min(srcH, 1024);
 
   try {
-    // Try OffscreenCanvas first (works with ImageBitmap, no CORS issues)
     if (typeof OffscreenCanvas !== "undefined") {
       const oc = new OffscreenCanvas(W, H);
       const ctx = oc.getContext("2d") as OffscreenCanvasRenderingContext2D | null;
@@ -132,18 +130,15 @@ async function buildTexData(tex: THREE.Texture | null): Promise<TexData | null> 
         ctx.drawImage(img as CanvasImageSource, 0, 0, W, H);
         const data = ctx.getImageData(0, 0, W, H).data;
         const ci = (Math.floor(H/2)*W + Math.floor(W/2)) * 4;
-        console.log(`[TEX] OffscreenCanvas ${W}×${H} centre=rgb(${data[ci]},${data[ci+1]},${data[ci+2]})`);
+        console.log(`[TEX] ${W}×${H} centre=rgb(${data[ci]},${data[ci+1]},${data[ci+2]})`);
         return { data, w: W, h: H };
       }
     }
-    // Fallback: regular canvas
     const oc2 = document.createElement("canvas");
     oc2.width = W; oc2.height = H;
     const ctx2 = oc2.getContext("2d")!;
     ctx2.drawImage(img as CanvasImageSource, 0, 0, W, H);
     const data2 = ctx2.getImageData(0, 0, W, H).data;
-    const ci2 = (Math.floor(H/2)*W + Math.floor(W/2)) * 4;
-    console.log(`[TEX] Canvas ${W}×${H} centre=rgb(${data2[ci2]},${data2[ci2+1]},${data2[ci2+2]})`);
     return { data: data2, w: W, h: H };
   } catch (e) {
     console.warn("[TEX] draw failed:", e);
@@ -152,9 +147,8 @@ async function buildTexData(tex: THREE.Texture | null): Promise<TexData | null> 
 }
 
 function sampleTex(td: TexData, u: number, v: number): [number,number,number] {
-  // Clamp/wrap UV
   const uu = ((u % 1) + 1) % 1;
-  const vv = 1 - ((v % 1) + 1) % 1;  // flip V (WebGL vs canvas)
+  const vv = 1 - ((v % 1) + 1) % 1;
   const px = Math.min(Math.floor(uu * td.w), td.w - 1);
   const py = Math.min(Math.floor(vv * td.h), td.h - 1);
   const j  = (py * td.w + px) * 4;
@@ -173,14 +167,14 @@ function addScript(src: string): Promise<void> {
   });
 }
 
-/* ── BARYCENTRIC PARTICLE SAMPLER ───────────────────────────── */
-/**
- * Sample N_PARTICLES from a mesh using manual triangle area weighting
- * and barycentric UV interpolation — gives accurate texture colours.
- */
-async function buildParticleArrays(
-  meshes: { geo: THREE.BufferGeometry; tex: TexData | null }[]
-): Promise<{
+/* ── PARTICLE BUILDER ───────────────────────────────────────── */
+interface MeshEntry {
+  geo: THREE.BufferGeometry;
+  hasVertexColor: boolean;
+  tex: TexData | null;
+}
+
+async function buildParticleArrays(meshes: MeshEntry[]): Promise<{
   posArr: Float32Array; sctArr: Float32Array;
   phArr: Float32Array;  szArr: Float32Array;
   colArr: Float32Array;
@@ -191,11 +185,17 @@ async function buildParticleArrays(
   const szArr  = new Float32Array(N_PARTICLES);
   const colArr = new Float32Array(N_PARTICLES * 3);
 
-  // Build triangle list across all meshes
   type Tri = {
+    /* positions */
     ax:number; ay:number; az:number;
     bx:number; by:number; bz:number;
     cx:number; cy:number; cz:number;
+    /* vertex colours (if available) */
+    car:number; cag:number; cab:number;
+    cbr:number; cbg:number; cbb:number;
+    ccr:number; ccg:number; ccb:number;
+    hasVC: boolean;
+    /* UVs (if no vertex colour) */
     au:number; av:number;
     bu:number; bv:number;
     cu:number; cv:number;
@@ -206,9 +206,10 @@ async function buildParticleArrays(
   const tris: Tri[] = [];
   let totalArea = 0;
 
-  for (const { geo, tex } of meshes) {
+  for (const { geo, hasVertexColor, tex } of meshes) {
     const pos = geo.attributes.position;
-    const uv  = geo.attributes.uv;
+    const col = hasVertexColor ? geo.attributes.color : null;
+    const uv  = geo.attributes.uv ?? null;
     const idx = geo.index;
     const triCount = idx ? idx.count / 3 : pos.count / 3;
 
@@ -221,7 +222,6 @@ async function buildParticleArrays(
       const bx=pos.getX(ib), by=pos.getY(ib), bz=pos.getZ(ib);
       const cx=pos.getX(ic), cy=pos.getY(ic), cz=pos.getZ(ic);
 
-      // Triangle area via cross product
       const ex=bx-ax, ey=by-ay, ez=bz-az;
       const fx=cx-ax, fy=cy-ay, fz=cz-az;
       const area = 0.5 * Math.sqrt(
@@ -229,24 +229,36 @@ async function buildParticleArrays(
       );
       if (area < 1e-10) continue;
 
+      // Vertex colours
+      const car = col ? col.getX(ia) : 0, cag = col ? col.getY(ia) : 0, cab = col ? col.getZ(ia) : 0;
+      const cbr = col ? col.getX(ib) : 0, cbg = col ? col.getY(ib) : 0, cbb = col ? col.getZ(ib) : 0;
+      const ccr = col ? col.getX(ic) : 0, ccg = col ? col.getY(ic) : 0, ccb = col ? col.getZ(ic) : 0;
+
+      // UVs
       const au = uv ? uv.getX(ia) : 0, av = uv ? uv.getY(ia) : 0;
       const bu = uv ? uv.getX(ib) : 0, bv = uv ? uv.getY(ib) : 0;
       const cu = uv ? uv.getX(ic) : 0, cv = uv ? uv.getY(ic) : 0;
 
-      tris.push({ ax,ay,az, bx,by,bz, cx,cy,cz, au,av, bu,bv, cu,cv, area, tex });
+      tris.push({
+        ax,ay,az, bx,by,bz, cx,cy,cz,
+        car,cag,cab, cbr,cbg,cbb, ccr,ccg,ccb,
+        hasVC: hasVertexColor,
+        au,av, bu,bv, cu,cv,
+        area, tex
+      });
       totalArea += area;
     }
   }
 
   if (tris.length === 0) {
-    console.warn("[SAMPLE] No triangles found — using fallback colours");
+    console.warn("[SAMPLE] No triangles — fallback pink");
     for (let i = 0; i < N_PARTICLES; i++) {
-      colArr[i*3]=0.85; colArr[i*3+1]=0.42; colArr[i*3+2]=0.55;
+      colArr[i*3]=0.80; colArr[i*3+1]=0.45; colArr[i*3+2]=0.58;
     }
     return { posArr, sctArr, phArr, szArr, colArr };
   }
 
-  // Build CDF for area-weighted sampling
+  // CDF for area-weighted sampling
   const cdf = new Float64Array(tris.length);
   let acc = 0;
   for (let i = 0; i < tris.length; i++) {
@@ -254,65 +266,63 @@ async function buildParticleArrays(
     cdf[i] = acc;
   }
 
-  // Sample particles
-  let uvZeroCount = 0;
+  let vcCount = 0, texCount = 0, fallCount = 0;
+
   for (let i = 0; i < N_PARTICLES; i++) {
-    // Pick triangle by area weight
+    // Pick triangle
     const r = Math.random();
     let lo=0, hi=tris.length-1;
     while (lo < hi) { const mid=(lo+hi)>>1; if (cdf[mid]<r) lo=mid+1; else hi=mid; }
     const tri = tris[lo];
 
-    // Random barycentric coordinates
+    // Barycentric coords
     const r1 = Math.random(), r2 = Math.random();
     const sqr1 = Math.sqrt(r1);
-    const u1 = 1 - sqr1, u2 = sqr1 * (1 - r2), u3 = sqr1 * r2;
+    const u1 = 1 - sqr1, u2 = sqr1*(1-r2), u3 = sqr1*r2;
 
     const px = u1*tri.ax + u2*tri.bx + u3*tri.cx;
     const py = u1*tri.ay + u2*tri.by + u3*tri.cy;
     const pz = u1*tri.az + u2*tri.bz + u3*tri.cz;
+    posArr[i*3]=px; posArr[i*3+1]=py; posArr[i*3+2]=pz;
 
-    posArr[i*3]   = px;
-    posArr[i*3+1] = py;
-    posArr[i*3+2] = pz;
-
-    // Interpolated UV
-    const pu = u1*tri.au + u2*tri.bu + u3*tri.cu;
-    const pv = u1*tri.av + u2*tri.bv + u3*tri.cv;
-
-    if (pu === 0 && pv === 0) uvZeroCount++;
-
-    // Sample texture colour
-    if (tri.tex) {
-      const [r,g,b] = sampleTex(tri.tex, pu, pv);
-      colArr[i*3]=r; colArr[i*3+1]=g; colArr[i*3+2]=b;
+    // Colour — prefer vertex colour, fall back to texture UV
+    if (tri.hasVC) {
+      colArr[i*3]   = u1*tri.car + u2*tri.cbr + u3*tri.ccr;
+      colArr[i*3+1] = u1*tri.cag + u2*tri.cbg + u3*tri.ccg;
+      colArr[i*3+2] = u1*tri.cab + u2*tri.cbb + u3*tri.ccb;
+      vcCount++;
+    } else if (tri.tex) {
+      const pu = u1*tri.au + u2*tri.bu + u3*tri.cu;
+      const pv = u1*tri.av + u2*tri.bv + u3*tri.cv;
+      const [cr,cg,cb] = sampleTex(tri.tex, pu, pv);
+      colArr[i*3]=cr; colArr[i*3+1]=cg; colArr[i*3+2]=cb;
+      texCount++;
     } else {
-      // Fallback: soft pink
-      colArr[i*3]=0.85; colArr[i*3+1]=0.42; colArr[i*3+2]=0.55;
+      colArr[i*3]=0.80; colArr[i*3+1]=0.45; colArr[i*3+2]=0.58;
+      fallCount++;
     }
 
-    // Scatter direction
+    // Scatter
     const len = Math.sqrt(px*px+py*py+pz*pz) || 1;
     const ox=px/len, oy=py/len, oz=pz/len;
     const rx=(Math.random()-0.5)*2, ry=(Math.random()-0.5)*2, rz=(Math.random()-0.5)*2;
     const rl=Math.sqrt(rx*rx+ry*ry+rz*rz)||1;
-    const mix=0.6;
-    const sx=ox*(1-mix)+rx/rl*mix, sy=oy*(1-mix)+ry/rl*mix, sz=oz*(1-mix)+rz/rl*mix;
+    const mx=0.6;
+    const sx=ox*(1-mx)+rx/rl*mx, sy=oy*(1-mx)+ry/rl*mx, sz=oz*(1-mx)+rz/rl*mx;
     const sl=Math.sqrt(sx*sx+sy*sy+sz*sz)||1;
-    const mag = SCATTER_R * (0.35 + Math.random() * 0.65);
+    const mag = SCATTER_R * (0.35 + Math.random()*0.65);
     sctArr[i*3]=sx/sl*mag; sctArr[i*3+1]=sy/sl*mag; sctArr[i*3+2]=sz/sl*mag;
 
     phArr[i] = Math.random() * Math.PI * 2;
     szArr[i] = 0.5 + Math.random() * 1.0;
   }
 
-  // Diagnostic
-  const sample5 = Array.from({length:5}, (_,k) => {
+  const s5 = Array.from({length:5}, (_,k) => {
     const j=k*3;
     return `rgb(${(colArr[j]*255).toFixed(0)},${(colArr[j+1]*255).toFixed(0)},${(colArr[j+2]*255).toFixed(0)})`;
   });
-  console.log(`[SAMPLE] ${tris.length} tris, ${N_PARTICLES} particles, uvZero=${uvZeroCount}`);
-  console.log('[SAMPLE] first 5 colours:', sample5.join('  '));
+  console.log(`[SAMPLE] tris=${tris.length} vc=${vcCount} tex=${texCount} fall=${fallCount}`);
+  console.log('[SAMPLE] first 5:', s5.join('  '));
 
   return { posArr, sctArr, phArr, szArr, colArr };
 }
@@ -376,7 +386,7 @@ export default function Home() {
             setDetail("Extracting meshes…");
             gltf.scene.updateMatrixWorld(true);
 
-            // Scale the whole scene to MODEL_SCALE
+            // Scale to MODEL_SCALE
             const box0 = new THREE.Box3().setFromObject(gltf.scene);
             const sz0  = box0.getSize(new THREE.Vector3());
             const sc   = MODEL_SCALE / Math.max(sz0.x, sz0.y, sz0.z);
@@ -389,27 +399,36 @@ export default function Home() {
             gltf.scene.position.sub(ctr);
             gltf.scene.updateMatrixWorld(true);
 
-            // Collect meshes with their textures
-            type MeshEntry = { geo: THREE.BufferGeometry; tex: TexData | null };
-            const meshEntries: MeshEntry[] = [];
-
             const meshNodes: THREE.Mesh[] = [];
             gltf.scene.traverse(child => {
               if ((child as THREE.Mesh).isMesh) meshNodes.push(child as THREE.Mesh);
             });
 
-            setDetail(`Loading textures (${meshNodes.length} meshes)…`);
+            console.log(`[LOAD] ${meshNodes.length} mesh(es) found`);
 
+            // Log what colour data is available
+            for (const mesh of meshNodes) {
+              const g = mesh.geometry;
+              const hasVC = !!g.attributes.color;
+              const hasUV = !!g.attributes.uv;
+              const mat   = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+              const hasTex = !!(mat as THREE.MeshStandardMaterial)?.map;
+              console.log(`[MESH] vc=${hasVC} uv=${hasUV} tex=${hasTex} verts=${g.attributes.position.count}`);
+            }
+
+            setDetail(`Processing ${meshNodes.length} mesh(es)…`);
+
+            const meshEntries: MeshEntry[] = [];
             for (const mesh of meshNodes) {
               const g = mesh.geometry.clone();
               g.applyMatrix4(mesh.matrixWorld);
 
-              const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
-              const std = mat as THREE.MeshStandardMaterial;
-              const rawTex = std?.map ?? null;
+              const hasVC = !!g.attributes.color;
+              const mat   = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+              const rawTex = (mat as THREE.MeshStandardMaterial)?.map ?? null;
+              const tex = hasVC ? null : await buildTexData(rawTex);
 
-              const texData = await buildTexData(rawTex);
-              meshEntries.push({ geo: g, tex: texData });
+              meshEntries.push({ geo: g, hasVertexColor: hasVC, tex });
             }
 
             setDetail("Generating particles…");
