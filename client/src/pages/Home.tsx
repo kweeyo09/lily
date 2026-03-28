@@ -67,8 +67,8 @@ void main(){
 
   vec3 pos = aOrigin + fl + aScatter * ep;
 
-  float baseA = 0.80 + 0.20 * noise3(aOrigin*1.3 + ft*0.25);
-  vAlpha = mix(baseA, 1.0 - ep * 0.92, ep);
+  float baseA = 0.72 + 0.18 * noise3(aOrigin*1.3 + ft*0.25);
+  vAlpha = mix(baseA, 1.0 - ep * 0.95, ep);
 
   /* preserve texture colour — only very slight cool drift on scatter */
   vColor = mix(aColor, aColor * 0.85 + vec3(0.02,0.03,0.08), ep * 0.35);
@@ -90,14 +90,13 @@ void main(){
   float r = distance(gl_PointCoord, vec2(0.5));
   if(r > 0.5) discard;
 
-  /* soft disc — preserve texture hue, no brightness blowout */
-  float core = smoothstep(0.50, 0.05, r);
-  float halo = smoothstep(0.50, 0.28, r) * 0.10;
-  float mask = core + halo;
+  /* Soft disc with NO brightness lift — pure texture colour */
+  float core = smoothstep(0.50, 0.10, r);       /* solid filled disc */
+  float edge = smoothstep(0.50, 0.35, r) * 0.25; /* very faint halo */
+  float mask = core + edge;
 
-  /* tiny centre lift (max 1.06×) — keeps hue intact */
-  vec3 col = vColor * (1.0 + core * 0.06);
-  gl_FragColor = vec4(col, mask * vAlpha);
+  /* No brightness multiplication — colour stays exactly as sampled */
+  gl_FragColor = vec4(vColor, mask * vAlpha * 0.88);
 }
 `;
 
@@ -432,7 +431,7 @@ export default function Home() {
               vertexShader:   VERT,
               fragmentShader: FRAG,
               transparent:    true,
-              blending:       THREE.AdditiveBlending,
+              blending:       THREE.NormalBlending,
               depthWrite:     false,
             });
 
