@@ -146,9 +146,17 @@ async function buildTexData(tex: THREE.Texture | null): Promise<TexData | null> 
   }
 }
 
+/**
+ * Sample texture at UV (u,v).
+ * IMPORTANT: GLB/glTF UV convention has v=0 at top of image.
+ * Canvas/ImageData has y=0 at top, so NO v-flip is needed.
+ * We use the triangle CENTROID UV (passed in pre-averaged) to avoid
+ * sampling across UV island seams which causes green/wrong colour bleed.
+ */
 function sampleTex(td: TexData, u: number, v: number): [number,number,number] {
-  const uu = ((u % 1) + 1) % 1;
-  const vv = 1 - ((v % 1) + 1) % 1;
+  // Clamp to [0,1] — centroid UVs should always be in range
+  const uu = Math.max(0, Math.min(1, u));
+  const vv = Math.max(0, Math.min(1, v));
   const px = Math.min(Math.floor(uu * td.w), td.w - 1);
   const py = Math.min(Math.floor(vv * td.h), td.h - 1);
   const j  = (py * td.w + px) * 4;
@@ -199,6 +207,8 @@ async function buildParticleArrays(meshes: MeshEntry[]): Promise<{
     au:number; av:number;
     bu:number; bv:number;
     cu:number; cv:number;
+    /* Pre-computed centroid UV — safe to sample (stays inside UV island) */
+    centU: number; centV: number;
     area: number;
     tex: TexData | null;
   };
@@ -244,6 +254,8 @@ async function buildParticleArrays(meshes: MeshEntry[]): Promise<{
         car,cag,cab, cbr,cbg,cbb, ccr,ccg,ccb,
         hasVC: hasVertexColor,
         au,av, bu,bv, cu,cv,
+        centU: (au+bu+cu)/3,
+        centV: (av+bv+cv)/3,
         area, tex
       });
       totalArea += area;
@@ -286,15 +298,18 @@ async function buildParticleArrays(meshes: MeshEntry[]): Promise<{
     posArr[i*3]=px; posArr[i*3+1]=py; posArr[i*3+2]=pz;
 
     // Colour — prefer vertex colour, fall back to texture UV
+    // CRITICAL: use CENTROID UV (average of 3 verts), NOT random barycentric UV.
+    // Random barycentric UV can land near UV island seams and sample wrong colours
+    // (e.g. green stem areas bleeding onto pink petal triangles).
+    // Centroid UV stays safely inside the triangle's UV island.
     if (tri.hasVC) {
       colArr[i*3]   = u1*tri.car + u2*tri.cbr + u3*tri.ccr;
       colArr[i*3+1] = u1*tri.cag + u2*tri.cbg + u3*tri.ccg;
       colArr[i*3+2] = u1*tri.cab + u2*tri.cbb + u3*tri.ccb;
       vcCount++;
     } else if (tri.tex) {
-      const pu = u1*tri.au + u2*tri.bu + u3*tri.cu;
-      const pv = u1*tri.av + u2*tri.bv + u3*tri.cv;
-      const [cr,cg,cb] = sampleTex(tri.tex, pu, pv);
+      // Use centroid UV — pre-computed average of the 3 triangle vertex UVs
+      const [cr,cg,cb] = sampleTex(tri.tex, tri.centU, tri.centV);
       colArr[i*3]=cr; colArr[i*3+1]=cg; colArr[i*3+2]=cb;
       texCount++;
     } else {
