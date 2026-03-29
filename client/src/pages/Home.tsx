@@ -396,7 +396,8 @@ export default function Home() {
   const labelRef   = useRef<HTMLDivElement>(null);
   const loadRef    = useRef<HTMLDivElement>(null);
   const loadTxtRef = useRef<HTMLDivElement>(null);
-  const gestureRef = useRef<HTMLDivElement>(null);  // live gesture indicator
+  const gestureRef    = useRef<HTMLDivElement>(null);  // live gesture indicator
+  const handCanvasRef  = useRef<HTMLCanvasElement>(null); // skeleton wireframe overlay
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -537,14 +538,69 @@ export default function Home() {
     };
 
     /* ── MEDIAPIPE HANDS ── */
-    let prevLandmarks: Landmark[] | null = null;
     let lastGesture: string = 'none';
     let swipeCooldown = 0;
+    // Velocity accumulator: sum of wrist x-deltas over recent frames
+    let swipeVel = 0;
+    let prevWristX: number | null = null;
+
+    /* ── HAND SKELETON DRAWING ── */
+    // MediaPipe hand connections (21 landmarks)
+    const HAND_CONNECTIONS = [
+      [0,1],[1,2],[2,3],[3,4],         // thumb
+      [0,5],[5,6],[6,7],[7,8],         // index
+      [0,9],[9,10],[10,11],[11,12],    // middle
+      [0,13],[13,14],[14,15],[15,16],  // ring
+      [0,17],[17,18],[18,19],[19,20],  // pinky
+      [5,9],[9,13],[13,17],            // palm
+    ];
+
+    const drawSkeleton = (lm: Landmark[]) => {
+      const canvas = handCanvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      // Mirror x because video is scaleX(-1)
+      const px = (lm: Landmark) => ({ x: (1 - lm.x) * W, y: lm.y * H });
+
+      // Draw connections
+      ctx.strokeStyle = 'rgba(255, 200, 80, 0.75)';
+      ctx.lineWidth = 1.5;
+      for (const [a, b] of HAND_CONNECTIONS) {
+        const pa = px(lm[a]), pb = px(lm[b]);
+        ctx.beginPath();
+        ctx.moveTo(pa.x, pa.y);
+        ctx.lineTo(pb.x, pb.y);
+        ctx.stroke();
+      }
+
+      // Draw landmark dots
+      for (let i = 0; i < lm.length; i++) {
+        const p = px(lm[i]);
+        const isTip = [4,8,12,16,20].includes(i);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, isTip ? 4 : 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = isTip ? 'rgba(255,100,100,0.95)' : 'rgba(255,220,100,0.9)';
+        ctx.fill();
+      }
+    };
+
+    const clearSkeleton = () => {
+      const canvas = handCanvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
 
     const onResults = (results: { multiHandLandmarks?: Landmark[][] }) => {
       if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
         lastGesture = 'none';
-        prevLandmarks = null;
+        prevWristX = null;
+        swipeVel = 0;
+        clearSkeleton();
         return;
       }
 
@@ -552,15 +608,23 @@ export default function Home() {
       const gesture = detectGesture(lm);
       const now = Date.now();
 
-      // Swipe detection
-      if (now > swipeCooldown) {
-        const swipe = detectSwipe(prevLandmarks, lm);
-        if (swipe) {
-          switchFlower(swipe);
-          swipeCooldown = now + 900;
+      // Draw skeleton wireframe
+      drawSkeleton(lm);
+
+      // Velocity-based swipe: accumulate wrist x-delta over frames
+      // Decay existing velocity each frame, add new delta
+      const wristX = lm[0].x;
+      if (prevWristX !== null) {
+        const dx = wristX - prevWristX;  // positive = moving right in camera space
+        swipeVel = swipeVel * 0.6 + dx;  // exponential moving average
+        if (now > swipeCooldown && Math.abs(swipeVel) > 0.12) {
+          // swipeVel > 0 means hand moved right in camera → mirrored = left on screen
+          switchFlower(swipeVel > 0 ? 'left' : 'right');
+          swipeCooldown = now + 1000;
+          swipeVel = 0;
         }
       }
-      prevLandmarks = lm;
+      prevWristX = wristX;
 
       // Pinch → select current flower
       if (gesture === 'pinch' && lastGesture !== 'pinch') {
@@ -773,6 +837,17 @@ export default function Home() {
           ref={videoRef}
           style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)', display: 'block' }}
           playsInline muted
+        />
+        {/* Hand skeleton wireframe canvas — same size as the preview box */}
+        <canvas
+          ref={handCanvasRef}
+          width={160}
+          height={120}
+          style={{
+            position: 'absolute', inset: 0,
+            width: '100%', height: '100%',
+            pointerEvents: 'none',
+          }}
         />
         <div style={{
           position: 'absolute', bottom: 6, left: 0, right: 0,
