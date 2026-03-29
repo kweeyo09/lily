@@ -5,11 +5,12 @@
  * particle clouds. Gesture-driven interaction via MediaPipe Hands.
  *
  * Gesture map:
- *   Swipe left/right  → cycle between lily and hibiscus
- *   Pinch             → select / focus the current flower
- *   Open palm         → scatter selected flower's particles
- *   Fist              → gather particles back
- *   Space bar         → toggle scatter/gather (keyboard fallback)
+ *   👈 Point left / 👉 Point right  → cycle between lily and hibiscus
+ *       (index finger extended, all others curled, pointing sideways)
+ *   🤏 Pinch             → select / focus the current flower
+ *   ✋ Open palm         → scatter selected flower’s particles
+ *   ✊ Fist              → gather particles back
+ *   Space bar / ← →   → keyboard fallback
  *
  * Particle colour: centroid UV sampling from each triangle's texture atlas
  * (avoids UV island seam bleed that causes wrong colours).
@@ -348,15 +349,16 @@ function thumbExtended(lm: Landmark[]): boolean {
   return dist(lm[4], lm[5]) > dist(lm[2], lm[5]) * 0.9;
 }
 
-function detectGesture(lm: Landmark[]): 'open' | 'fist' | 'pinch' | 'none' {
+function detectGesture(lm: Landmark[]): 'open' | 'fist' | 'pinch' | 'point_left' | 'point_right' | 'none' {
   if (!lm || lm.length < 21) return 'none';
 
-  // Pinch: thumb tip close to index tip (relative to hand size)
   const handSize = dist(lm[0], lm[9]);  // wrist to middle MCP
+
+  // Pinch: thumb tip close to index tip (relative to hand size)
   const pinchDist = dist(lm[4], lm[8]);
   if (pinchDist < handSize * 0.35) return 'pinch';
 
-  // Check each finger: tip vs MCP (knuckle base)
+  // Check each finger extension
   const indexExt  = fingerExtended(lm, 8,  5);
   const middleExt = fingerExtended(lm, 12, 9);
   const ringExt   = fingerExtended(lm, 16, 13);
@@ -365,8 +367,20 @@ function detectGesture(lm: Landmark[]): 'open' | 'fist' | 'pinch' | 'none' {
 
   // Open palm: at least 3 fingers extended
   if (extCount >= 3) return 'open';
+
   // Fist: all 4 fingers curled
   if (extCount === 0) return 'fist';
+
+  // Pointing: ONLY index finger extended, others curled
+  if (indexExt && !middleExt && !ringExt && !pinkyExt) {
+    // Determine direction from index fingertip (lm[8]) vs index MCP (lm[5])
+    // In camera space: x increases left→right; video is mirrored so we flip
+    const dx = lm[8].x - lm[5].x; // positive = tip to the right in camera = LEFT on mirrored screen
+    if (Math.abs(dx) > 0.04) {     // require clear horizontal component
+      return dx > 0 ? 'point_left' : 'point_right';
+    }
+  }
+
   return 'none';
 }
 
@@ -611,20 +625,17 @@ export default function Home() {
       // Draw skeleton wireframe
       drawSkeleton(lm);
 
-      // Velocity-based swipe: accumulate wrist x-delta over frames
-      // Decay existing velocity each frame, add new delta
-      const wristX = lm[0].x;
-      if (prevWristX !== null) {
-        const dx = wristX - prevWristX;  // positive = moving right in camera space
-        swipeVel = swipeVel * 0.6 + dx;  // exponential moving average
-        if (now > swipeCooldown && Math.abs(swipeVel) > 0.12) {
-          // swipeVel > 0 means hand moved right in camera → mirrored = left on screen
-          switchFlower(swipeVel > 0 ? 'left' : 'right');
-          swipeCooldown = now + 1000;
-          swipeVel = 0;
+      // Pointing gesture → switch flower
+      // Requires holding the point for 400ms to avoid accidental triggers
+      if (now > swipeCooldown) {
+        if (gesture === 'point_left' && lastGesture !== 'point_left') {
+          switchFlower('left');
+          swipeCooldown = now + 1200;
+        } else if (gesture === 'point_right' && lastGesture !== 'point_right') {
+          switchFlower('right');
+          swipeCooldown = now + 1200;
         }
       }
-      prevWristX = wristX;
 
       // Pinch → select current flower
       if (gesture === 'pinch' && lastGesture !== 'pinch') {
@@ -649,11 +660,20 @@ export default function Home() {
 
       // Update live gesture indicator
       if (gestureRef.current) {
-        const icons: Record<string, string> = { open: '✋ open', fist: '✊ fist', pinch: '🤏 pinch', none: '· · ·' };
+        const icons: Record<string, string> = {
+          open:        '✋ open',
+          fist:        '✊ fist',
+          pinch:       '🤏 pinch',
+          point_left:  '👈 switch',
+          point_right: '👉 switch',
+          none:        '· · ·',
+        };
         gestureRef.current.textContent = icons[gesture] ?? '· · ·';
-        gestureRef.current.style.color = gesture === 'open' ? 'rgba(255,200,120,0.9)'
-          : gesture === 'fist' ? 'rgba(120,200,255,0.9)'
-          : gesture === 'pinch' ? 'rgba(200,255,160,0.9)'
+        gestureRef.current.style.color =
+          gesture === 'open'        ? 'rgba(255,200,120,0.9)'
+          : gesture === 'fist'      ? 'rgba(120,200,255,0.9)'
+          : gesture === 'pinch'     ? 'rgba(200,255,160,0.9)'
+          : gesture === 'point_left' || gesture === 'point_right' ? 'rgba(255,160,220,0.9)'
           : 'rgba(255,255,255,0.25)';
       }
 
@@ -808,9 +828,9 @@ export default function Home() {
         pointerEvents: 'none',
       }}>
         Drag to orbit · Scroll to zoom<br />
-        Open palm → scatter · Fist → gather<br />
-        Swipe left/right → switch flower<br />
-        Pinch → select · ← → Space
+        ✋ Open palm → scatter · ✊ Fist → gather<br />
+        👈👉 Point left/right → switch flower<br />
+        🤏 Pinch → select · ← → Space
       </div>
 
       {/* Title */}
