@@ -365,21 +365,22 @@ function detectGesture(lm: Landmark[]): 'open' | 'fist' | 'pinch' | 'point_left'
   const pinkyExt  = fingerExtended(lm, 20, 17);
   const extCount  = [indexExt, middleExt, ringExt, pinkyExt].filter(Boolean).length;
 
-  // Open palm: at least 3 fingers extended
+  // Pointing: ONLY index extended, others curled — checked BEFORE open palm
+  // so a single raised index finger is never misread as open palm
+  if (indexExt && !middleExt && !ringExt && !pinkyExt) {
+    // Direction: index tip x vs index MCP x (camera space, video is mirrored)
+    const dx = lm[8].x - lm[5].x;
+    if (Math.abs(dx) > 0.04) {
+      return dx > 0 ? 'point_left' : 'point_right';
+    }
+    return 'none'; // pointing straight up/down — not a direction gesture
+  }
+
+  // Open palm: at least 3 fingers extended (index already excluded above)
   if (extCount >= 3) return 'open';
 
   // Fist: all 4 fingers curled
   if (extCount === 0) return 'fist';
-
-  // Pointing: ONLY index finger extended, others curled
-  if (indexExt && !middleExt && !ringExt && !pinkyExt) {
-    // Determine direction from index fingertip (lm[8]) vs index MCP (lm[5])
-    // In camera space: x increases left→right; video is mirrored so we flip
-    const dx = lm[8].x - lm[5].x; // positive = tip to the right in camera = LEFT on mirrored screen
-    if (Math.abs(dx) > 0.04) {     // require clear horizontal component
-      return dx > 0 ? 'point_left' : 'point_right';
-    }
-  }
 
   return 'none';
 }
@@ -446,12 +447,22 @@ export default function Home() {
       name: string;
     };
 
+    // Flowers placed side by side: lily at x=-2.2, hibiscus at x=+2.2
+    const FLOWER_X = [-2.2, 2.2];
+
     const flowers: FlowerState[] = [
       { points: null, mat: null, progress: 0, targetProgress: 0, selected: false, loaded: false, name: '百合' },
       { points: null, mat: null, progress: 0, targetProgress: 0, selected: false, loaded: false, name: '木槿' },
     ];
 
-    let activeIdx = 0;   // which flower is shown
+    let activeIdx = 0;   // which flower is focused
+
+    // Camera pan: smoothly lerp camera x and controls target x
+    let camTargetX  = FLOWER_X[0];
+    let camCurrentX = FLOWER_X[0];
+    camera.position.set(FLOWER_X[0], 0, 4.5);
+    controls.target.set(FLOWER_X[0], 0, 0);
+
     let clock = new THREE.Clock();
 
     /* ── LOAD BOTH FLOWERS ── */
@@ -492,7 +503,8 @@ export default function Home() {
 
         const points = new THREE.Points(geo, mat);
         points.frustumCulled = false;
-        points.visible = idx === 0; // only show first flower initially
+        points.visible = true; // both flowers always visible
+        points.position.x = FLOWER_X[idx]; // place side by side
 
         scene.add(points);
         flowers[idx].points = points;
@@ -526,19 +538,12 @@ export default function Home() {
 
     /* ── SWITCH FLOWER ── */
     const switchFlower = (dir: 'left' | 'right') => {
-      const prev = flowers[activeIdx];
-      if (prev.points) {
-        // Animate out: scatter then hide
-        prev.targetProgress = 1;
-        setTimeout(() => { if (prev.points) prev.points.visible = false; prev.targetProgress = 0; prev.progress = 0; }, 800);
-      }
       activeIdx = 1 - activeIdx;
-      const next = flowers[activeIdx];
-      if (next.points) {
-        next.points.visible = true;
-        next.progress = 1;
-        next.targetProgress = 0; // gather in
-      }
+      // Pan camera to the newly focused flower
+      camTargetX = FLOWER_X[activeIdx];
+      // Disable orbit controls temporarily so the pan isn't fought
+      controls.enabled = false;
+      setTimeout(() => { controls.enabled = true; }, 1200);
       updateLabel();
       showGestureStatus(dir === 'left' ? '← ' + flowers[activeIdx].name : flowers[activeIdx].name + ' →');
     };
@@ -734,10 +739,15 @@ export default function Home() {
       const dt   = clock.getDelta();
       const time = clock.getElapsedTime();
 
+      // Smooth camera pan towards focused flower
+      const panLerp = 1 - Math.pow(0.04, dt); // ~3s settle time
+      camCurrentX += (camTargetX - camCurrentX) * panLerp;
+      camera.position.x = camCurrentX;
+      controls.target.x = camCurrentX;
       controls.update();
 
       for (const f of flowers) {
-        if (!f.mat || !f.points || !f.points.visible) continue;
+        if (!f.mat || !f.points) continue;
 
         // Smooth progress towards target
         const speed = f.targetProgress > f.progress ? SCATTER_SPEED : GATHER_SPEED;
@@ -747,10 +757,8 @@ export default function Home() {
         f.mat.uniforms.uProgress.value = f.progress;
         f.mat.uniforms.uTime.value     = time;
 
-        // Slow rotation when gathered
-        if (f.progress < 0.5) {
-          f.points.rotation.y += dt * 0.18;
-        }
+        // Both flowers always rotate slowly in place
+        f.points.rotation.y += dt * 0.18;
       }
 
       renderer.render(scene, camera);
