@@ -34,12 +34,13 @@ const MP_CAM   = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.16400
 
 /* ── PARTICLE CONFIG ───────────────────────────────────────────── */
 const N_PARTICLES   = 60_000;
-const PARTICLE_SIZE = 0.012;
+const PARTICLE_SIZE = 0.038;   // increased — was 0.012, too small
 const FLOAT_AMP     = 0.008;
 const FLOAT_SPEED   = 0.55;
-const SCATTER_DIST  = 2.2;
-const GATHER_SPEED  = 3.5;   // how fast gather animation runs
+const SCATTER_DIST  = 1.8;
+const GATHER_SPEED  = 3.5;
 const SCATTER_SPEED = 2.0;
+const TARGET_RADIUS = 1.4;    // normalise model to fit this world-space radius
 
 /* ── VERTEX SHADER ─────────────────────────────────────────────── */
 const VERT = /* glsl */`
@@ -193,16 +194,16 @@ async function buildParticles(
 
     console.log(`[MESH] vc=${hasVertexColor} uv=${!!uv} tex=${!!texData} verts=${pos.count}`);
 
-    const faceCount = idx ? idx.count / 3 : pos.count / 3;
-    for (let f = 0; f < faceCount; f++) {
+  const faceCount = idx ? idx.count / 3 : pos.count / 3;
+  for (let f = 0; f < faceCount; f++) {
       const ia = idx ? idx.getX(f*3)   : f*3;
       const ib = idx ? idx.getX(f*3+1) : f*3+1;
       const ic = idx ? idx.getX(f*3+2) : f*3+2;
 
-      // World-space positions
-      const va = new THREE.Vector3(pos.getX(ia), pos.getY(ia), pos.getZ(ia)).applyMatrix4(mesh.matrixWorld);
-      const vb = new THREE.Vector3(pos.getX(ib), pos.getY(ib), pos.getZ(ib)).applyMatrix4(mesh.matrixWorld);
-      const vc2 = new THREE.Vector3(pos.getX(ic), pos.getY(ic), pos.getZ(ic)).applyMatrix4(mesh.matrixWorld);
+      // Local-space positions (we normalise after collecting all tris)
+      const va = new THREE.Vector3(pos.getX(ia), pos.getY(ia), pos.getZ(ia));
+      const vb = new THREE.Vector3(pos.getX(ib), pos.getY(ib), pos.getZ(ib));
+      const vc2 = new THREE.Vector3(pos.getX(ic), pos.getY(ic), pos.getZ(ic));
 
       const area = va.clone().sub(vb).cross(va.clone().sub(vc2)).length() * 0.5;
       if (area < 1e-10) continue;
@@ -226,6 +227,26 @@ async function buildParticles(
       });
       totalArea += area;
     }
+  }
+
+  // ── Auto-normalise: compute bounding sphere of all triangle centroids,
+  //    then scale positions so the model fits TARGET_RADIUS.
+  let cx = 0, cy = 0, cz = 0;
+  for (const t of tris) { cx += (t.ax+t.bx+t.cx)/3; cy += (t.ay+t.by+t.cy)/3; cz += (t.az+t.bz+t.cz)/3; }
+  cx /= tris.length; cy /= tris.length; cz /= tris.length;
+  let maxR = 0;
+  for (const t of tris) {
+    for (const [x,y,z] of [[t.ax,t.ay,t.az],[t.bx,t.by,t.bz],[t.cx,t.cy,t.cz]] as [number,number,number][]) {
+      const d = Math.sqrt((x-cx)**2+(y-cy)**2+(z-cz)**2);
+      if (d > maxR) maxR = d;
+    }
+  }
+  const normScale = maxR > 0 ? TARGET_RADIUS / maxR : 1;
+  console.log(`[NORM] centre=(${cx.toFixed(3)},${cy.toFixed(3)},${cz.toFixed(3)}) maxR=${maxR.toFixed(3)} scale=${normScale.toFixed(3)}`);
+  for (const t of tris) {
+    t.ax = (t.ax-cx)*normScale; t.ay = (t.ay-cy)*normScale; t.az = (t.az-cz)*normScale;
+    t.bx = (t.bx-cx)*normScale; t.by = (t.by-cy)*normScale; t.bz = (t.bz-cz)*normScale;
+    t.cx = (t.cx-cx)*normScale; t.cy = (t.cy-cy)*normScale; t.cz = (t.cz-cz)*normScale;
   }
 
   // Weighted random triangle selection
@@ -307,51 +328,75 @@ async function buildParticles(
 /* ── GESTURE DETECTION ──────────────────────────────────────────── */
 type Landmark = { x: number; y: number; z: number };
 
-function fingerExtended(lm: Landmark[], tip: number, pip: number): boolean {
-  return lm[tip].y < lm[pip].y;
+/** Euclidean distance between two landmarks (normalised 0-1 image space) */
+function dist(a: Landmark, b: Landmark) {
+  return Math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2);
+}
+
+/**
+ * Robust finger-extension check:
+ * A finger is "extended" when its TIP is farther from the WRIST than its MCP knuckle.
+ * This works regardless of hand orientation (up/down/tilted).
+ */
+function fingerExtended(lm: Landmark[], tip: number, mcp: number): boolean {
+  const wrist = lm[0];
+  return dist(lm[tip], wrist) > dist(lm[mcp], wrist) * 1.05;
+}
+
+/** Thumb extended: tip farther from index MCP than thumb MCP */
+function thumbExtended(lm: Landmark[]): boolean {
+  return dist(lm[4], lm[5]) > dist(lm[2], lm[5]) * 0.9;
 }
 
 function detectGesture(lm: Landmark[]): 'open' | 'fist' | 'pinch' | 'none' {
   if (!lm || lm.length < 21) return 'none';
 
-  const thumbTip  = lm[4];
-  const indexTip  = lm[8];
-  const pinchDist = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
+  // Pinch: thumb tip close to index tip (relative to hand size)
+  const handSize = dist(lm[0], lm[9]);  // wrist to middle MCP
+  const pinchDist = dist(lm[4], lm[8]);
+  if (pinchDist < handSize * 0.35) return 'pinch';
 
-  if (pinchDist < 0.06) return 'pinch';
+  // Check each finger: tip vs MCP (knuckle base)
+  const indexExt  = fingerExtended(lm, 8,  5);
+  const middleExt = fingerExtended(lm, 12, 9);
+  const ringExt   = fingerExtended(lm, 16, 13);
+  const pinkyExt  = fingerExtended(lm, 20, 17);
+  const extCount  = [indexExt, middleExt, ringExt, pinkyExt].filter(Boolean).length;
 
-  const ext = [
-    fingerExtended(lm, 8, 6),
-    fingerExtended(lm, 12, 10),
-    fingerExtended(lm, 16, 14),
-    fingerExtended(lm, 20, 18),
-  ];
-  const extCount = ext.filter(Boolean).length;
-
+  // Open palm: at least 3 fingers extended
   if (extCount >= 3) return 'open';
+  // Fist: all 4 fingers curled
   if (extCount === 0) return 'fist';
   return 'none';
 }
 
-/* ── SWIPE DETECTION ────────────────────────────────────────────── */
+/* ── SWIPE DETECTION ──────────────────────────────────────────── */
+/**
+ * Swipe detection: track wrist (lm[0]) x-movement over multiple frames.
+ * Requires a sustained movement > 0.18 of image width to trigger —
+ * much harder to trigger accidentally than a single-frame delta.
+ */
 function detectSwipe(
   prev: Landmark[] | null,
   curr: Landmark[]
 ): 'left' | 'right' | null {
   if (!prev || !curr) return null;
-  const dx = curr[9].x - prev[9].x; // wrist x delta
-  if (Math.abs(dx) > 0.08) return dx > 0 ? 'right' : 'left';
+  // Use wrist (0) for more stable tracking than palm base (9)
+  const dx = curr[0].x - prev[0].x;
+  // Require larger movement (0.18 vs 0.08) to avoid false triggers
+  if (Math.abs(dx) > 0.18) return dx > 0 ? 'right' : 'left';
   return null;
 }
 
 /* ── MAIN COMPONENT ─────────────────────────────────────────────── */
 export default function Home() {
-  const mountRef  = useRef<HTMLDivElement>(null);
-  const videoRef  = useRef<HTMLVideoElement>(null);
-  const statusRef = useRef<HTMLDivElement>(null);
-  const labelRef  = useRef<HTMLDivElement>(null);
-  const loadRef   = useRef<HTMLDivElement>(null);
+  const mountRef   = useRef<HTMLDivElement>(null);
+  const videoRef   = useRef<HTMLVideoElement>(null);
+  const statusRef  = useRef<HTMLDivElement>(null);
+  const labelRef   = useRef<HTMLDivElement>(null);
+  const loadRef    = useRef<HTMLDivElement>(null);
   const loadTxtRef = useRef<HTMLDivElement>(null);
+  const gestureRef = useRef<HTMLDivElement>(null);  // live gesture indicator
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -536,6 +581,16 @@ export default function Home() {
         flowers[activeIdx].selected = false;
         if (lastGesture !== 'fist') showGestureStatus('fist · gather');
         updateLabel();
+      }
+
+      // Update live gesture indicator
+      if (gestureRef.current) {
+        const icons: Record<string, string> = { open: '✋ open', fist: '✊ fist', pinch: '🤏 pinch', none: '· · ·' };
+        gestureRef.current.textContent = icons[gesture] ?? '· · ·';
+        gestureRef.current.style.color = gesture === 'open' ? 'rgba(255,200,120,0.9)'
+          : gesture === 'fist' ? 'rgba(120,200,255,0.9)'
+          : gesture === 'pinch' ? 'rgba(200,255,160,0.9)'
+          : 'rgba(255,255,255,0.25)';
       }
 
       lastGesture = gesture;
@@ -724,6 +779,13 @@ export default function Home() {
           textAlign: 'center', color: 'rgba(255,255,255,0.4)',
           fontSize: '0.55rem', letterSpacing: '0.2em', fontFamily: 'monospace',
         }}>HAND TRACKING</div>
+        {/* Live gesture indicator */}
+        <div ref={gestureRef} style={{
+          position: 'absolute', top: 6, left: 0, right: 0,
+          textAlign: 'center', fontSize: '0.7rem', letterSpacing: '0.1em',
+          fontFamily: 'monospace', color: 'rgba(255,255,255,0.25)',
+          transition: 'color 0.2s',
+        }}>· · ·</div>
       </div>
 
       {/* Scatter / Gather button */}
