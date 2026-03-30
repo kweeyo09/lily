@@ -777,7 +777,7 @@ export default function Home() {
         zIndex: 10, color: '#fff', fontFamily: '"Noto Serif SC", serif',
       }}>
         <div style={{ fontSize: '2rem', letterSpacing: '0.3em', marginBottom: '0.5rem' }}>瑶草琪花</div>
-        <div style={{ fontSize: '0.6rem', letterSpacing: '0.35em', opacity: 0.4, marginBottom: '1.5rem', fontFamily: 'monospace' }}>KIXIZ STUDIO</div>
+        <div style={{ fontSize: '0.75rem', letterSpacing: '0.35em', opacity: 0.85, marginBottom: '1.5rem', fontFamily: 'monospace' }}>KIXIZ STUDIO</div>
         <div ref={loadTxtRef} style={{ fontSize: '0.75rem', letterSpacing: '0.2em', opacity: 0.5 }}>Loading…</div>
         <div style={{ marginTop: '1.5rem', width: 48, height: 48, borderRadius: '50%' }} className="ld-spinner" />
       </div>
@@ -804,7 +804,7 @@ export default function Home() {
       {/* Controls hint */}
       <div style={{
         position: 'absolute', top: 24, left: 28,
-        color: 'rgba(255,255,255,0.28)', fontSize: '0.65rem',
+        color: 'rgba(255,255,255,0.65)', fontSize: '0.65rem',
         fontFamily: 'monospace', letterSpacing: '0.12em', lineHeight: 1.9,
         pointerEvents: 'none',
       }}>
@@ -822,7 +822,7 @@ export default function Home() {
         pointerEvents: 'none', whiteSpace: 'nowrap',
       }}>
         瑶草琪花
-        <span style={{ display: 'block', fontSize: '0.55rem', letterSpacing: '0.35em', opacity: 0.45, fontFamily: 'monospace', marginTop: 4 }}>
+        <span style={{ display: 'block', fontSize: '0.75rem', letterSpacing: '0.35em', opacity: 0.85, fontFamily: 'monospace', marginTop: 6 }}>
           KIXIZ STUDIO
         </span>
       </div>
