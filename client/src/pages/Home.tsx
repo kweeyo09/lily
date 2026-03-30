@@ -501,6 +501,18 @@ export default function Home() {
       showGestureStatus(dir === 'left' ? '← ' + FLOWER_NAMES[activeIdx] : FLOWER_NAMES[activeIdx] + ' →');
     };
 
+    /* ── SELECT / DESELECT ACTIVE FLOWER ── */
+    const selectFlower = () => {
+      flowers[activeIdx].selected = true;
+      showGestureStatus('🌸 selected · open palm to scatter');
+      updateLabel();
+    };
+    const deselectFlower = () => {
+      flowers[activeIdx].selected = false;
+      flowers[activeIdx].targetProgress = 0;
+      updateLabel();
+    };
+
     /* ── GESTURE STATUS UI ── */
     const showGestureStatus = (text: string) => {
       if (!statusRef.current) return;
@@ -579,21 +591,18 @@ export default function Home() {
       }
 
       if (gesture === 'pinch' && lastGesture !== 'pinch') {
-        flowers[activeIdx].selected = true;
-        showGestureStatus('pinch · selected');
-        updateLabel();
+        selectFlower();
       }
 
-      if (gesture === 'open') {
+      // Open palm only scatters if the flower has been pinch-selected first
+      if (gesture === 'open' && flowers[activeIdx].selected) {
         flowers[activeIdx].targetProgress = 1;
-        if (lastGesture !== 'open') showGestureStatus('open · scatter');
+        if (lastGesture !== 'open') showGestureStatus('✋ scatter');
       }
 
       if (gesture === 'fist') {
-        flowers[activeIdx].targetProgress = 0;
-        flowers[activeIdx].selected = false;
-        if (lastGesture !== 'fist') showGestureStatus('fist · gather');
-        updateLabel();
+        deselectFlower();
+        if (lastGesture !== 'fist') showGestureStatus('✊ gather');
       }
 
       if (gestureRef.current) {
@@ -652,12 +661,53 @@ export default function Home() {
       if (e.code === 'Space') {
         e.preventDefault();
         const f = flowers[activeIdx];
-        f.targetProgress = f.targetProgress > 0.5 ? 0 : 1;
+        if (!f.selected) {
+          selectFlower();
+        } else {
+          f.targetProgress = f.targetProgress > 0.5 ? 0 : 1;
+        }
       }
       if (e.code === 'ArrowLeft')  switchFlower('left');
       if (e.code === 'ArrowRight') switchFlower('right');
     };
     window.addEventListener('keydown', onKey);
+
+    /* ── MOUSE WHEEL: cycle flowers ── */
+    let wheelCooldown = 0;
+    const onWheel = (e: WheelEvent) => {
+      // Only cycle if not zooming (ctrl key = pinch-zoom on trackpad)
+      if (e.ctrlKey) return;
+      const now = Date.now();
+      if (now < wheelCooldown) return;
+      wheelCooldown = now + 700;
+      if (e.deltaY > 0 || e.deltaX > 0) switchFlower('right');
+      else switchFlower('left');
+    };
+    renderer.domElement.addEventListener('wheel', onWheel, { passive: true });
+
+    /* ── CANVAS CLICK / TAP: select then scatter ── */
+    let lastTap = 0;
+    const onCanvasClick = () => {
+      const f = flowers[activeIdx];
+      if (!f.selected) {
+        selectFlower();
+      } else {
+        f.targetProgress = f.targetProgress > 0.5 ? 0 : 1;
+        showGestureStatus(f.targetProgress > 0.5 ? '🌸 scatter' : '🌸 gather');
+      }
+    };
+    // Touch: single tap
+    const onTouchEnd = (e: TouchEvent) => {
+      const now = Date.now();
+      if (now - lastTap < 300) return; // debounce
+      lastTap = now;
+      // Only fire if it was a tap (not a drag)
+      if (e.changedTouches[0] && Math.abs(e.changedTouches[0].clientX) > 0) {
+        onCanvasClick();
+      }
+    };
+    renderer.domElement.addEventListener('click', onCanvasClick);
+    renderer.domElement.addEventListener('touchend', onTouchEnd, { passive: true });
 
     /* ── ANIMATION LOOP ── */
     let raf = 0;
@@ -700,6 +750,9 @@ export default function Home() {
       cancelAnimationFrame(raf);
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('resize', onResize);
+      renderer.domElement.removeEventListener('wheel', onWheel);
+      renderer.domElement.removeEventListener('click', onCanvasClick);
+      renderer.domElement.removeEventListener('touchend', onTouchEnd);
       controls.dispose();
       renderer.dispose();
       for (const f of flowers) {
@@ -755,10 +808,10 @@ export default function Home() {
         fontFamily: 'monospace', letterSpacing: '0.12em', lineHeight: 1.9,
         pointerEvents: 'none',
       }}>
-        Drag to orbit · Scroll to zoom<br />
-        ✋ Open palm → scatter · ✊ Fist → gather<br />
-        👈👉 Point left/right → switch flower<br />
-        🤏 Pinch → select · ← → Space
+        Scroll / swipe → cycle flowers<br />
+        Click / tap → select then scatter<br />
+        🤏 Pinch → select · ✋ Open palm → scatter<br />
+        ✊ Fist → gather · 👈👉 Point → switch
       </div>
 
       {/* Title */}
