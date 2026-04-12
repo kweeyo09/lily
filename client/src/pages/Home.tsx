@@ -452,13 +452,12 @@ export default function Home() {
       controls.enabled = false;
       setTimeout(() => { controls.enabled = true; }, 1200);
       updateLabel();
-      showGestureStatus(dir === 'left' ? '← ' + FLOWER_NAMES[activeIdx] : FLOWER_NAMES[activeIdx] + ' →');
+
     };
 
     /* ── SELECT / DESELECT ACTIVE FLOWER ── */
     const selectFlower = () => {
       flowers[activeIdx].selected = true;
-      showGestureStatus('🌸 selected · open palm to scatter');
       updateLabel();
     };
     const deselectFlower = () => {
@@ -467,13 +466,7 @@ export default function Home() {
       updateLabel();
     };
 
-    /* ── GESTURE STATUS UI ── */
-    const showGestureStatus = (text: string) => {
-      if (!statusRef.current) return;
-      statusRef.current.textContent = text;
-      statusRef.current.style.opacity = '1';
-      setTimeout(() => { if (statusRef.current) statusRef.current.style.opacity = '0'; }, 1200);
-    };
+
 
 
 
