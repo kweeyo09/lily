@@ -45,9 +45,7 @@ const FLOWER_FALLBACK: [number,number,number][] = [
   [0.85, 0.20, 0.15],  // pomegranate: deep red
 ];
 
-/* ── MEDIAPIPE CDN ─────────────────────────────────────────────── */
-const MP_HANDS = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js';
-const MP_CAM   = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js';
+
 
 /* ── PARTICLE CONFIG ───────────────────────────────────────────── */
 const N_FLOWERS     = 3;
@@ -318,54 +316,12 @@ async function buildParticles(
 
   return { geo };
 }
-
-/* ── GESTURE DETECTION ──────────────────────────────────────────── */
-type Landmark = { x: number; y: number; z: number };
-
-function dist(a: Landmark, b: Landmark) {
-  return Math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2);
-}
-
-function fingerExtended(lm: Landmark[], tip: number, mcp: number): boolean {
-  const wrist = lm[0];
-  return dist(lm[tip], wrist) > dist(lm[mcp], wrist) * 1.05;
-}
-
-function detectGesture(lm: Landmark[]): 'open' | 'fist' | 'pinch' | 'point_left' | 'point_right' | 'none' {
-  if (!lm || lm.length < 21) return 'none';
-
-  const handSize  = dist(lm[0], lm[9]);
-  const pinchDist = dist(lm[4], lm[8]);
-  if (pinchDist < handSize * 0.35) return 'pinch';
-
-  const indexExt  = fingerExtended(lm, 8,  5);
-  const middleExt = fingerExtended(lm, 12, 9);
-  const ringExt   = fingerExtended(lm, 16, 13);
-  const pinkyExt  = fingerExtended(lm, 20, 17);
-  const extCount  = [indexExt, middleExt, ringExt, pinkyExt].filter(Boolean).length;
-
-  // Pointing checked BEFORE open palm to avoid misclassification
-  if (indexExt && !middleExt && !ringExt && !pinkyExt) {
-    const dx = lm[8].x - lm[5].x;
-    if (Math.abs(dx) > 0.04) return dx > 0 ? 'point_left' : 'point_right';
-    return 'none';
-  }
-
-  if (extCount >= 3) return 'open';
-  if (extCount === 0) return 'fist';
-  return 'none';
-}
-
 /* ── MAIN COMPONENT ─────────────────────────────────────────────── */
 export default function Home() {
   const mountRef      = useRef<HTMLDivElement>(null);
-  const videoRef      = useRef<HTMLVideoElement>(null);
-  const statusRef     = useRef<HTMLDivElement>(null);
   const labelRef      = useRef<HTMLDivElement>(null);
   const loadRef       = useRef<HTMLDivElement>(null);
   const loadTxtRef    = useRef<HTMLDivElement>(null);
-  const gestureRef    = useRef<HTMLDivElement>(null);
-  const handCanvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -519,140 +475,7 @@ export default function Home() {
       setTimeout(() => { if (statusRef.current) statusRef.current.style.opacity = '0'; }, 1200);
     };
 
-    /* ── HAND SKELETON ── */
-    const HAND_CONNECTIONS = [
-      [0,1],[1,2],[2,3],[3,4],
-      [0,5],[5,6],[6,7],[7,8],
-      [0,9],[9,10],[10,11],[11,12],
-      [0,13],[13,14],[14,15],[15,16],
-      [0,17],[17,18],[18,19],[19,20],
-      [5,9],[9,13],[13,17],
-    ];
 
-    const drawSkeleton = (lm: Landmark[]) => {
-      const canvas = handCanvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      const W = canvas.width, H = canvas.height;
-      ctx.clearRect(0, 0, W, H);
-      const px = (l: Landmark) => ({ x: (1 - l.x) * W, y: l.y * H });
-      ctx.strokeStyle = 'rgba(255,200,80,0.75)';
-      ctx.lineWidth = 1.5;
-      for (const [a, b] of HAND_CONNECTIONS) {
-        const pa = px(lm[a]), pb = px(lm[b]);
-        ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
-      }
-      for (let i = 0; i < lm.length; i++) {
-        const p = px(lm[i]);
-        const isTip = [4,8,12,16,20].includes(i);
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, isTip ? 4 : 2.5, 0, Math.PI * 2);
-        ctx.fillStyle = isTip ? 'rgba(255,100,100,0.95)' : 'rgba(255,220,100,0.9)';
-        ctx.fill();
-      }
-    };
-
-    const clearSkeleton = () => {
-      const canvas = handCanvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-    };
-
-    /* ── MEDIAPIPE ── */
-    let lastGesture = 'none';
-    let swipeCooldown = 0;
-
-    const onResults = (results: { multiHandLandmarks?: Landmark[][] }) => {
-      if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-        lastGesture = 'none';
-        clearSkeleton();
-        if (gestureRef.current) { gestureRef.current.textContent = '· · ·'; gestureRef.current.style.color = 'rgba(255,255,255,0.25)'; }
-        return;
-      }
-
-      const lm = results.multiHandLandmarks[0];
-      const gesture = detectGesture(lm);
-      const now = Date.now();
-
-      drawSkeleton(lm);
-
-      if (now > swipeCooldown) {
-        if (gesture === 'point_left' && lastGesture !== 'point_left') {
-          switchFlower('left');
-          swipeCooldown = now + 1200;
-        } else if (gesture === 'point_right' && lastGesture !== 'point_right') {
-          switchFlower('right');
-          swipeCooldown = now + 1200;
-        }
-      }
-
-      if (gesture === 'pinch' && lastGesture !== 'pinch') {
-        selectFlower();
-      }
-
-      // Open palm only scatters if the flower has been pinch-selected first
-      if (gesture === 'open' && flowers[activeIdx].selected) {
-        flowers[activeIdx].targetProgress = 1;
-        if (lastGesture !== 'open') showGestureStatus('✋ scatter');
-      }
-
-      if (gesture === 'fist') {
-        deselectFlower();
-        if (lastGesture !== 'fist') showGestureStatus('✊ gather');
-      }
-
-      if (gestureRef.current) {
-        const icons: Record<string, string> = {
-          open: '✋ open', fist: '✊ fist', pinch: '🤏 pinch',
-          point_left: '👈 switch', point_right: '👉 switch', none: '· · ·',
-        };
-        gestureRef.current.textContent = icons[gesture] ?? '· · ·';
-        gestureRef.current.style.color =
-          gesture === 'open'        ? 'rgba(255,200,120,0.9)'
-          : gesture === 'fist'      ? 'rgba(120,200,255,0.9)'
-          : gesture === 'pinch'     ? 'rgba(200,255,160,0.9)'
-          : gesture === 'point_left' || gesture === 'point_right' ? 'rgba(255,160,220,0.9)'
-          : 'rgba(255,255,255,0.25)';
-      }
-
-      lastGesture = gesture;
-    };
-
-    let mpLoaded = false;
-    const initMP = async () => {
-      if (mpLoaded) return;
-      try {
-        await addScript(MP_HANDS);
-        await addScript(MP_CAM);
-        mpLoaded = true;
-
-        const Hands = (window as unknown as Record<string, unknown>)['Hands'] as new (cfg: object) => {
-          setOptions(o: object): void;
-          onResults(cb: (r: unknown) => void): void;
-          send(data: object): Promise<void>;
-        };
-        const Camera = (window as unknown as Record<string, unknown>)['Camera'] as new (
-          el: HTMLVideoElement, cfg: { onFrame: () => Promise<void>; width: number; height: number }
-        ) => { start(): void };
-
-        const hands = new Hands({ locateFile: (f: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${f}` });
-        hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.6 });
-        hands.onResults(onResults as (r: unknown) => void);
-
-        if (videoRef.current) {
-          const cam = new Camera(videoRef.current, {
-            onFrame: async () => { if (videoRef.current) await hands.send({ image: videoRef.current }); },
-            width: 320, height: 240,
-          });
-          cam.start();
-        }
-      } catch(e) {
-        console.warn('[MP] MediaPipe load failed:', e);
-      }
-    };
-    initMP();
 
     /* ── KEYBOARD FALLBACK ── */
     const onKey = (e: KeyboardEvent) => {
@@ -683,29 +506,13 @@ export default function Home() {
     };
     renderer.domElement.addEventListener('wheel', onWheel, { passive: true });
 
-    /* ── CANVAS CLICK / TAP: select then scatter ── */
-    let lastTap = 0;
+    /* ── CANVAS CLICK / TAP: scatter particles ── */
     const onCanvasClick = () => {
       const f = flowers[activeIdx];
-      if (!f.selected) {
-        selectFlower();
-      } else {
-        f.targetProgress = f.targetProgress > 0.5 ? 0 : 1;
-        showGestureStatus(f.targetProgress > 0.5 ? '🌸 scatter' : '🌸 gather');
-      }
-    };
-    // Touch: single tap
-    const onTouchEnd = (e: TouchEvent) => {
-      const now = Date.now();
-      if (now - lastTap < 300) return; // debounce
-      lastTap = now;
-      // Only fire if it was a tap (not a drag)
-      if (e.changedTouches[0] && Math.abs(e.changedTouches[0].clientX) > 0) {
-        onCanvasClick();
-      }
+      f.targetProgress = f.targetProgress > 0.5 ? 0 : 1;
     };
     renderer.domElement.addEventListener('click', onCanvasClick);
-    renderer.domElement.addEventListener('touchend', onTouchEnd, { passive: true });
+    renderer.domElement.addEventListener('touchend', onCanvasClick, { passive: true });
 
     /* ── ANIMATION LOOP ── */
     let raf = 0;
@@ -750,7 +557,7 @@ export default function Home() {
       window.removeEventListener('resize', onResize);
       renderer.domElement.removeEventListener('wheel', onWheel);
       renderer.domElement.removeEventListener('click', onCanvasClick);
-      renderer.domElement.removeEventListener('touchend', onTouchEnd);
+
       controls.dispose();
       renderer.dispose();
       for (const f of flowers) {
@@ -789,15 +596,7 @@ export default function Home() {
         transition: 'opacity 0.3s',
       }} />
 
-      {/* Gesture status flash */}
-      <div ref={statusRef} style={{
-        position: 'absolute', bottom: 100, left: '50%',
-        transform: 'translateX(-50%)',
-        color: 'rgba(255,255,255,0.7)',
-        fontFamily: 'monospace', fontSize: '0.75rem', letterSpacing: '0.15em',
-        opacity: 0, transition: 'opacity 0.4s',
-        pointerEvents: 'none',
-      }} />
+
 
       {/* Controls hint */}
       <div style={{
@@ -810,8 +609,8 @@ export default function Home() {
         pointerEvents: 'none',
       }}>
         <div style={{ fontWeight: 'bold', marginBottom: '10px', opacity: 0.9, fontSize: '0.75rem' }}>SCROLL TO EXPLORE WORKS</div>
-        Scroll / swipe → cycle flowers<br />
-        Click / tap → select then scatter
+        Scroll → cycle flowers<br />
+        Click / tap → scatter
       </div>
 
       {/* KIXIZ STUDIO - Left side */}
@@ -871,51 +670,7 @@ export default function Home() {
 
 
 
-      {/* Scatter / Gather button */}
-      <button
-        onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }))}
-        style={{
-          position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.28)',
-          borderRadius: 40, color: 'rgba(255,255,255,0.9)',
-          padding: '12px 32px', fontSize: '0.75rem', letterSpacing: '0.2em', fontWeight: 500,
-          fontFamily: 'monospace', cursor: 'pointer', backdropFilter: 'blur(12px)',
-          transition: 'all 0.2s ease',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.18)';
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.28)';
-        }}
-      >
-        🌸 SCATTER / GATHER
-      </button>
 
-      {/* Switch flower button */}
-      <button
-        onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowRight', bubbles: true }))}
-        style={{
-          position: 'absolute', bottom: 32, right: 28,
-          background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.28)',
-          borderRadius: 40, color: 'rgba(255,255,255,0.85)',
-          padding: '12px 24px', fontSize: '0.7rem', letterSpacing: '0.15em', fontWeight: 500,
-          fontFamily: 'monospace', cursor: 'pointer', backdropFilter: 'blur(12px)',
-          transition: 'all 0.2s ease',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.18)';
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.28)';
-        }}
-      >
-        SWITCH →
-      </button>
     </div>
   );
 }
