@@ -483,9 +483,8 @@ export default function Home() {
       const prevIdx = (activeIdx - 1 + N_FLOWERS) % N_FLOWERS;
       const nextIdx = (activeIdx + 1) % N_FLOWERS;
       labelRef.current.innerHTML =
-        `<span style="font-size:1.6rem;letter-spacing:0.15em">${FLOWER_NAMES[activeIdx]}</span>` +
-        `<span style="display:block;font-size:0.95rem;letter-spacing:0.25em;opacity:0.75;margin-top:6px;font-weight:300">${FLOWER_EN[activeIdx]}</span>` +
-        `<span style="display:block;font-size:0.6rem;letter-spacing:0.2em;opacity:0.22;margin-top:6px">← ${FLOWER_NAMES[prevIdx]} · ${FLOWER_NAMES[nextIdx]} →</span>`;
+        `<span style="font-size:2.2rem;letter-spacing:0.15em;font-weight:bold;color:#fff">${FLOWER_EN[activeIdx]}</span>` +
+        `<span style="display:block;font-size:0.7rem;letter-spacing:0.2em;opacity:0.4;margin-top:12px">← ${FLOWER_EN[prevIdx]} · ${FLOWER_EN[nextIdx]} →</span>`;
     };
     updateLabel();
 
