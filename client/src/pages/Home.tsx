@@ -845,35 +845,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Hand tracking preview */}
-      <div style={{
-        position: 'absolute', top: 16, right: 16,
-        width: 160, height: 120, borderRadius: 8,
-        overflow: 'hidden', border: '1px solid rgba(255,255,255,0.12)',
-        background: 'rgba(255,255,255,0.05)',
-      }}>
-        <video
-          ref={videoRef}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)', display: 'block' }}
-          playsInline muted
-        />
-        <canvas
-          ref={handCanvasRef}
-          width={160} height={120}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-        />
-        <div style={{
-          position: 'absolute', bottom: 6, left: 0, right: 0,
-          textAlign: 'center', color: 'rgba(255,255,255,0.4)',
-          fontSize: '0.55rem', letterSpacing: '0.2em', fontFamily: 'monospace',
-        }}>HAND TRACKING</div>
-        <div ref={gestureRef} style={{
-          position: 'absolute', top: 6, left: 0, right: 0,
-          textAlign: 'center', fontSize: '0.7rem', letterSpacing: '0.1em',
-          fontFamily: 'monospace', color: 'rgba(255,255,255,0.25)',
-          transition: 'color 0.2s',
-        }}>· · ·</div>
-      </div>
+
 
       {/* Scatter / Gather button */}
       <button
