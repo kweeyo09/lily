@@ -485,7 +485,7 @@ export default function Home() {
       const nextIdx = (activeIdx + 1) % N_FLOWERS;
       labelRef.current.innerHTML =
         `<span style="font-size:1.6rem;letter-spacing:0.15em">${FLOWER_NAMES[activeIdx]}</span>` +
-        `<span style="display:block;font-size:0.65rem;letter-spacing:0.25em;opacity:0.45;margin-top:4px">${FLOWER_EN[activeIdx]}</span>` +
+        `<span style="display:block;font-size:0.95rem;letter-spacing:0.25em;opacity:0.75;margin-top:6px;font-weight:300">${FLOWER_EN[activeIdx]}</span>` +
         `<span style="display:block;font-size:0.6rem;letter-spacing:0.2em;opacity:0.22;margin-top:6px">← ${FLOWER_NAMES[prevIdx]} · ${FLOWER_NAMES[nextIdx]} →</span>`;
     };
     updateLabel();
@@ -804,7 +804,10 @@ export default function Home() {
       {/* Controls hint */}
       <div style={{
         position: 'absolute', top: 24, left: 28,
-        color: 'rgba(255,255,255,0.65)', fontSize: '0.65rem',
+        background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+        borderRadius: 12, padding: '14px 18px',
+        backdropFilter: 'blur(10px)',
+        color: 'rgba(255,255,255,0.75)', fontSize: '0.65rem',
         fontFamily: 'monospace', letterSpacing: '0.12em', lineHeight: 1.9,
         pointerEvents: 'none',
       }}>
@@ -862,10 +865,19 @@ export default function Home() {
         onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }))}
         style={{
           position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)',
-          borderRadius: 40, color: 'rgba(255,255,255,0.7)',
-          padding: '10px 28px', fontSize: '0.7rem', letterSpacing: '0.2em',
-          fontFamily: 'monospace', cursor: 'pointer', backdropFilter: 'blur(8px)',
+          background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.28)',
+          borderRadius: 40, color: 'rgba(255,255,255,0.9)',
+          padding: '12px 32px', fontSize: '0.75rem', letterSpacing: '0.2em', fontWeight: 500,
+          fontFamily: 'monospace', cursor: 'pointer', backdropFilter: 'blur(12px)',
+          transition: 'all 0.2s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'rgba(255,255,255,0.18)';
+          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.28)';
         }}
       >
         🌸 SCATTER / GATHER
@@ -876,10 +888,19 @@ export default function Home() {
         onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowRight', bubbles: true }))}
         style={{
           position: 'absolute', bottom: 32, right: 28,
-          background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.18)',
-          borderRadius: 40, color: 'rgba(255,255,255,0.5)',
-          padding: '10px 20px', fontSize: '0.65rem', letterSpacing: '0.15em',
-          fontFamily: 'monospace', cursor: 'pointer', backdropFilter: 'blur(8px)',
+          background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.28)',
+          borderRadius: 40, color: 'rgba(255,255,255,0.85)',
+          padding: '12px 24px', fontSize: '0.7rem', letterSpacing: '0.15em', fontWeight: 500,
+          fontFamily: 'monospace', cursor: 'pointer', backdropFilter: 'blur(12px)',
+          transition: 'all 0.2s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'rgba(255,255,255,0.18)';
+          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.28)';
         }}
       >
         SWITCH →
