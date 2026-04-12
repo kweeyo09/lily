@@ -34,16 +34,15 @@ const FLOWER_URLS = [
   'https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/poppy_c3f1f0b0.glb',
 ];
 
-const FLOWER_NAMES = ['百合', '花烛', '莲花', '石榴花', '虞美人'];
-const FLOWER_EN    = ['Lily', 'Anthurium', 'Lotus', 'Pomegranate', 'Poppy'];
+// Display only 3 flowers with new names (keep all GLBs for later)
+const FLOWER_NAMES = ['百合', '花烛', '石榴花'];
+const FLOWER_EN    = ['UI design', '3D & motion', 'Product design'];
 
 // Fallback colours if texture fails
 const FLOWER_FALLBACK: [number,number,number][] = [
   [0.80, 0.48, 0.58],  // lily: dusty rose
   [0.85, 0.15, 0.20],  // anthurium: red
-  [0.95, 0.55, 0.65],  // lotus: pink
   [0.85, 0.20, 0.15],  // pomegranate: deep red
-  [0.90, 0.20, 0.20],  // poppy: scarlet
 ];
 
 /* ── MEDIAPIPE CDN ─────────────────────────────────────────────── */
@@ -51,7 +50,7 @@ const MP_HANDS = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/h
 const MP_CAM   = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js';
 
 /* ── PARTICLE CONFIG ───────────────────────────────────────────── */
-const N_FLOWERS     = 5;
+const N_FLOWERS     = 3;
 const N_PARTICLES   = 60_000;
 const PARTICLE_SIZE = 0.038;
 const FLOAT_AMP     = 0.008;
@@ -803,7 +802,7 @@ export default function Home() {
 
       {/* Controls hint */}
       <div style={{
-        position: 'absolute', top: 24, left: 28,
+        position: 'absolute', bottom: 32, left: 28,
         background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
         borderRadius: 12, padding: '14px 18px',
         backdropFilter: 'blur(10px)',
@@ -811,23 +810,39 @@ export default function Home() {
         fontFamily: 'monospace', letterSpacing: '0.12em', lineHeight: 1.9,
         pointerEvents: 'none',
       }}>
+        <div style={{ fontWeight: 'bold', marginBottom: '10px', opacity: 0.9, fontSize: '0.75rem' }}>SCROLL TO EXPLORE WORKS</div>
         Scroll / swipe → cycle flowers<br />
         Click / tap → select then scatter<br />
         🤏 Pinch → select · ✋ Open palm → scatter<br />
         ✊ Fist → gather · 👈👉 Point → switch
       </div>
 
-      {/* Title */}
+      {/* KIXIZ STUDIO - Left side */}
       <div style={{
-        position: 'absolute', top: 24, left: '50%', transform: 'translateX(-50%)',
-        color: 'rgba(255,255,255,0.75)', fontFamily: '"Noto Serif SC", serif',
-        fontSize: '1.1rem', letterSpacing: '0.35em', textAlign: 'center',
+        position: 'absolute', top: 32, left: 28,
+        color: '#fff', fontFamily: 'monospace',
+        fontSize: '1.8rem', letterSpacing: '0.2em', fontWeight: 'bold',
         pointerEvents: 'none', whiteSpace: 'nowrap',
       }}>
-        瑶草琪花
-        <span style={{ display: 'block', fontSize: '0.75rem', letterSpacing: '0.35em', opacity: 0.85, fontFamily: 'monospace', marginTop: 6 }}>
-          KIXIZ STUDIO
-        </span>
+        KIXIZ STUDIO
+      </div>
+
+      {/* Right sidebar - About & Contact */}
+      <div style={{
+        position: 'absolute', top: 32, right: 32,
+        display: 'flex', gap: '48px',
+        color: '#fff', fontFamily: 'monospace',
+        fontSize: '0.75rem', letterSpacing: '0.15em',
+        pointerEvents: 'none',
+      }}>
+        <div>
+          <div style={{ fontWeight: 'bold', marginBottom: '12px', opacity: 0.9 }}>ABOUT</div>
+          <div style={{ opacity: 0.6, lineHeight: 1.8 }}>Design studio<br />focused on<br />digital experiences</div>
+        </div>
+        <div>
+          <div style={{ fontWeight: 'bold', marginBottom: '12px', opacity: 0.9 }}>CONTACT</div>
+          <div style={{ opacity: 0.6, lineHeight: 1.8 }}>hello@kixiz.com<br />instagram.com/kixiz<br />dribbble.com/kixiz</div>
+        </div>
       </div>
 
       {/* Hand tracking preview */}
