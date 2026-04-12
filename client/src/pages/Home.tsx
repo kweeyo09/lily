@@ -483,7 +483,7 @@ export default function Home() {
       const prevIdx = (activeIdx - 1 + N_FLOWERS) % N_FLOWERS;
       const nextIdx = (activeIdx + 1) % N_FLOWERS;
       labelRef.current.innerHTML =
-        `<span style="font-size:2.2rem;letter-spacing:0.15em;font-weight:bold;color:#fff">${FLOWER_EN[activeIdx]}</span>` +
+        `<span style="font-size:1.4rem;letter-spacing:0.15em;font-weight:bold;color:#fff">${FLOWER_EN[activeIdx]}</span>` +
         `<span style="display:block;font-size:0.7rem;letter-spacing:0.2em;opacity:0.4;margin-top:12px">← ${FLOWER_EN[prevIdx]} · ${FLOWER_EN[nextIdx]} →</span>`;
     };
     updateLabel();
@@ -811,9 +811,7 @@ export default function Home() {
       }}>
         <div style={{ fontWeight: 'bold', marginBottom: '10px', opacity: 0.9, fontSize: '0.75rem' }}>SCROLL TO EXPLORE WORKS</div>
         Scroll / swipe → cycle flowers<br />
-        Click / tap → select then scatter<br />
-        🤏 Pinch → select · ✋ Open palm → scatter<br />
-        ✊ Fist → gather · 👈👉 Point → switch
+        Click / tap → select then scatter
       </div>
 
       {/* KIXIZ STUDIO - Left side */}
@@ -826,22 +824,49 @@ export default function Home() {
         KIXIZ STUDIO
       </div>
 
-      {/* Right sidebar - About & Contact */}
+      {/* Right sidebar - About & Contact buttons */}
       <div style={{
         position: 'absolute', top: 32, right: 32,
-        display: 'flex', gap: '48px',
-        color: '#fff', fontFamily: 'monospace',
-        fontSize: '0.75rem', letterSpacing: '0.15em',
-        pointerEvents: 'none',
+        display: 'flex', gap: '24px',
       }}>
-        <div>
-          <div style={{ fontWeight: 'bold', marginBottom: '12px', opacity: 0.9 }}>ABOUT</div>
-          <div style={{ opacity: 0.6, lineHeight: 1.8 }}>Design studio<br />focused on<br />digital experiences</div>
-        </div>
-        <div>
-          <div style={{ fontWeight: 'bold', marginBottom: '12px', opacity: 0.9 }}>CONTACT</div>
-          <div style={{ opacity: 0.6, lineHeight: 1.8 }}>hello@kixiz.com<br />instagram.com/kixiz<br />dribbble.com/kixiz</div>
-        </div>
+        <button
+          onClick={() => window.location.href = '/about'}
+          style={{
+            background: 'transparent', border: '1px solid rgba(255,255,255,0.3)',
+            borderRadius: 4, color: '#fff', fontFamily: 'monospace',
+            fontSize: '0.75rem', letterSpacing: '0.15em', padding: '8px 16px',
+            cursor: 'pointer', transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.6)';
+            e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
+            e.currentTarget.style.color = '#fff';
+          }}
+        >
+          ABOUT
+        </button>
+        <button
+          onClick={() => window.location.href = '/contact'}
+          style={{
+            background: 'transparent', border: '1px solid rgba(255,255,255,0.3)',
+            borderRadius: 4, color: '#fff', fontFamily: 'monospace',
+            fontSize: '0.75rem', letterSpacing: '0.15em', padding: '8px 16px',
+            cursor: 'pointer', transition: 'all 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.6)';
+            e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
+            e.currentTarget.style.color = '#fff';
+          }}
+        >
+          CONTACT
+        </button>
       </div>
 
 
