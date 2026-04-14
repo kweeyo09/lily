@@ -591,20 +591,47 @@ export default function Home() {
 
 
 
-      {/* Controls hint */}
+      {/* Centered bottom instructions */}
       <div style={{
-        position: 'absolute', bottom: 32, left: 28,
-        background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
-        borderRadius: 12, padding: '14px 18px',
-        backdropFilter: 'blur(10px)',
-        color: 'rgba(255,255,255,0.75)', fontSize: '0.65rem',
-        fontFamily: 'monospace', letterSpacing: '0.12em', lineHeight: 1.9,
+        position: 'absolute', bottom: 60, left: '50%', transform: 'translateX(-50%)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px',
         pointerEvents: 'none',
       }}>
-        <div style={{ fontWeight: 'bold', marginBottom: '10px', opacity: 0.9, fontSize: '0.75rem' }}>SCROLL TO EXPLORE WORKS</div>
-        Scroll → cycle flowers<br />
-        Click / tap → scatter
+        {/* Scroll instruction row */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '40px',
+          color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace',
+          fontSize: '0.75rem', letterSpacing: '0.1em',
+        }}>
+          <span>Scroll down</span>
+          <div style={{
+            width: '24px', height: '32px', border: '1px solid rgba(255,255,255,0.5)',
+            borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            position: 'relative',
+          }}>
+            <div style={{
+              width: '2px', height: '6px', background: 'rgba(255,255,255,0.7)',
+              borderRadius: '1px',
+              animation: 'scroll-bounce 2s infinite',
+            }} />
+          </div>
+          <span>to see projects</span>
+        </div>
+        {/* Click instruction */}
+        <div style={{
+          color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace',
+          fontSize: '0.7rem', letterSpacing: '0.1em',
+        }}>
+          Click / tap to scatter
+        </div>
       </div>
+      
+      <style>{`
+        @keyframes scroll-bounce {
+          0%, 100% { transform: translateY(0); opacity: 1; }
+          50% { transform: translateY(6px); opacity: 0.3; }
+        }
+      `}</style>
 
       {/* KIXIZ STUDIO - Left side */}
       <div style={{
