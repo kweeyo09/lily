@@ -600,8 +600,8 @@ export default function Home() {
         {/* Scroll instruction row */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: '40px',
-          color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace',
-          fontSize: '0.75rem', letterSpacing: '0.1em',
+          color: 'rgba(255,255,255,0.85)', fontFamily: 'monospace',
+          fontSize: '0.9rem', letterSpacing: '0.1em', fontWeight: '500',
         }}>
           <span>Scroll down</span>
           <div style={{
@@ -619,8 +619,8 @@ export default function Home() {
         </div>
         {/* Click instruction */}
         <div style={{
-          color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace',
-          fontSize: '0.7rem', letterSpacing: '0.1em',
+          color: 'rgba(255,255,255,0.75)', fontFamily: 'monospace',
+          fontSize: '0.85rem', letterSpacing: '0.1em', fontWeight: '400',
         }}>
           Click / tap to scatter
         </div>
