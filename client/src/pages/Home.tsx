@@ -507,9 +507,7 @@ export default function Home() {
         f.targetProgress = 0;
       } else {
         f.targetProgress = 1;
-        setTimeout(() => {
-          window.location.href = portfolioRoutes[activeIdx];
-        }, 800);
+        window.location.href = portfolioRoutes[activeIdx];
       }
     };
     renderer.domElement.addEventListener('click', onCanvasClick);
