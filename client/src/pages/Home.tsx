@@ -688,27 +688,7 @@ export default function Home() {
         </button>
       </div>
 
-      {/* NEXT button - bottom right */}
-      <button
-        onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowRight', bubbles: true }))}
-        style={{
-          position: 'absolute', bottom: 32, right: 32,
-          background: 'transparent', border: '1px solid rgba(255,255,255,0.3)',
-          borderRadius: 4, color: '#fff', fontFamily: 'monospace',
-          fontSize: '0.75rem', letterSpacing: '0.15em', padding: '8px 16px',
-          cursor: 'pointer', transition: 'all 0.2s ease',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.6)';
-          e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
-          e.currentTarget.style.color = '#fff';
-        }}
-      >
-        NEXT →
-      </button>
+
 
     </div>
   );
