@@ -500,9 +500,17 @@ export default function Home() {
     renderer.domElement.addEventListener('wheel', onWheel, { passive: true });
 
     /* ── CANVAS CLICK / TAP: scatter particles ── */
+    const portfolioRoutes = ['/ui-design', '/3d-motion', '/product-design'];
     const onCanvasClick = () => {
       const f = flowers[activeIdx];
-      f.targetProgress = f.targetProgress > 0.5 ? 0 : 1;
+      if (f.targetProgress > 0.5) {
+        f.targetProgress = 0;
+      } else {
+        f.targetProgress = 1;
+        setTimeout(() => {
+          window.location.href = portfolioRoutes[activeIdx];
+        }, 800);
+      }
     };
     renderer.domElement.addEventListener('click', onCanvasClick);
     renderer.domElement.addEventListener('touchend', onCanvasClick, { passive: true });
