@@ -507,7 +507,16 @@ export default function Home() {
         f.targetProgress = 0;
       } else {
         f.targetProgress = 1;
-        window.location.href = portfolioRoutes[activeIdx];
+        // Smooth fade transition
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0);z-index:9999;pointer-events:none;transition:background 0.6s ease-in-out';
+        document.body.appendChild(overlay);
+        requestAnimationFrame(() => {
+          overlay.style.background = 'rgba(0,0,0,1)';
+          setTimeout(() => {
+            window.location.href = portfolioRoutes[activeIdx];
+          }, 300);
+        });
       }
     };
     renderer.domElement.addEventListener('click', onCanvasClick);
