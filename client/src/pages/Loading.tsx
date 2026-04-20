@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 
 export default function Loading() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [showContent, setShowContent] = useState(true);
+  const [showContent, setShowContent] = useState(() => {
+    const hasShownLoading = sessionStorage.getItem('loadingScreenShown');
+    return !hasShownLoading;
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -121,6 +124,7 @@ export default function Loading() {
     // Handle click to dismiss
     const handleClick = () => {
       setShowContent(false);
+      sessionStorage.setItem('loadingScreenShown', 'true');
     };
 
     window.addEventListener('click', handleClick);
@@ -128,6 +132,7 @@ export default function Loading() {
     // Auto-hide after 3 minutes (180000ms)
     const timer = setTimeout(() => {
       setShowContent(false);
+      sessionStorage.setItem('loadingScreenShown', 'true');
     }, 180000);
 
     return () => {
@@ -137,7 +142,7 @@ export default function Loading() {
   }, []);
 
   if (!showContent) {
-    return null;
+    return <></>;
   }
 
   return (
