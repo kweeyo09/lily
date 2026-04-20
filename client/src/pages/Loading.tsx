@@ -29,41 +29,41 @@ export default function Loading() {
     }
 
     const petals: Petal[] = [];
-    const petalCount = 15; // Fewer petals
-    const colors = ['#ff6b9d', '#c44569', '#ffd89b', '#a8d8ff', '#e8d5f2', '#ffb3d9'];
+    const petalCount = 8; // Very few petals
+    const colors = ['#ff6b9d', '#c44569', '#ffd89b', '#a8d8ff', '#e8d5f2'];
 
     // Create petals
     for (let i = 0; i < petalCount; i++) {
       petals.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.5, // Slower movement
-        vy: (Math.random() - 0.5) * 0.5,
-        size: Math.random() * 30 + 20,
+        vx: (Math.random() - 0.5) * 0.1, // Very slow movement
+        vy: (Math.random() - 0.5) * 0.1,
+        size: Math.random() * 25 + 25,
         color: colors[Math.floor(Math.random() * colors.length)],
         rotation: Math.random() * Math.PI * 2,
-        rotationSpeed: (Math.random() - 0.5) * 0.02, // Much slower rotation
-        opacity: Math.random() * 0.4 + 0.3,
+        rotationSpeed: (Math.random() - 0.5) * 0.005, // Extremely slow rotation
+        opacity: Math.random() * 0.3 + 0.2,
       });
     }
 
     const animate = () => {
-      // Clear canvas with slight trail
-      ctx.fillStyle = 'rgba(15, 15, 25, 0.05)';
+      // Clear canvas completely for clean look
+      ctx.fillStyle = 'rgba(15, 15, 25, 1)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Update and draw petals
       petals.forEach((petal) => {
-        // Mouse distortion - much gentler
+        // Mouse distortion - very subtle
         const dx = mousePos.x - petal.x;
         const dy = mousePos.y - petal.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        const maxDistance = 200;
+        const maxDistance = 250;
 
         if (distance < maxDistance) {
-          const force = (1 - distance / maxDistance) * 0.15; // Much gentler force
-          petal.vx -= (dx / distance) * force;
-          petal.vy -= (dy / distance) * force;
+          const force = (1 - distance / maxDistance) * 0.05; // Very subtle force
+          petal.vx -= (dx / distance) * force * 0.5;
+          petal.vy -= (dy / distance) * force * 0.5;
         }
 
         // Movement
@@ -71,33 +71,26 @@ export default function Loading() {
         petal.y += petal.vy;
         petal.rotation += petal.rotationSpeed;
 
-        // Strong damping for smooth motion
-        petal.vx *= 0.95;
-        petal.vy *= 0.95;
+        // Very strong damping for smooth, slow motion
+        petal.vx *= 0.98;
+        petal.vy *= 0.98;
 
         // Wrap around edges
-        if (petal.x < -100) petal.x = canvas.width + 100;
-        if (petal.x > canvas.width + 100) petal.x = -100;
-        if (petal.y < -100) petal.y = canvas.height + 100;
-        if (petal.y > canvas.height + 100) petal.y = -100;
+        if (petal.x < -150) petal.x = canvas.width + 150;
+        if (petal.x > canvas.width + 150) petal.x = -150;
+        if (petal.y < -150) petal.y = canvas.height + 150;
+        if (petal.y > canvas.height + 150) petal.y = -150;
 
-        // Draw realistic petal
+        // Draw clean, simple petal
         ctx.save();
         ctx.translate(petal.x, petal.y);
         ctx.rotate(petal.rotation);
         ctx.fillStyle = petal.color;
         ctx.globalAlpha = petal.opacity;
 
-        // Draw petal shape (more realistic)
+        // Draw simple petal shape
         ctx.beginPath();
-        ctx.ellipse(0, 0, petal.size * 0.4, petal.size * 0.8, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Add subtle highlight
-        ctx.globalAlpha = petal.opacity * 0.5;
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.ellipse(-petal.size * 0.15, -petal.size * 0.3, petal.size * 0.15, petal.size * 0.2, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, petal.size * 0.35, petal.size * 0.7, 0, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();
