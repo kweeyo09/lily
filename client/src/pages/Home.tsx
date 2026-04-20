@@ -585,14 +585,14 @@ export default function Home() {
 
       {/* Loading overlay */}
       <div ref={loadRef} style={{
-        position: 'absolute', inset: 0, background: '#000',
+        position: 'absolute', inset: 0,
+        backgroundImage: 'url(https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/loading-screen-jxxgWx78yyeESAQ5S79tfn.webp)',
+        backgroundSize: 'cover', backgroundPosition: 'center',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        zIndex: 10, color: '#fff', fontFamily: '"Noto Serif SC", serif',
+        zIndex: 10, color: '#fff', fontFamily: 'monospace',
       }}>
-        <div style={{ fontSize: '2rem', letterSpacing: '0.3em', marginBottom: '0.5rem' }}>瑶草琪花</div>
-        <div style={{ fontSize: '0.75rem', letterSpacing: '0.35em', opacity: 0.85, marginBottom: '1.5rem', fontFamily: 'monospace' }}>KIXIZ STUDIO</div>
-        <div ref={loadTxtRef} style={{ fontSize: '0.75rem', letterSpacing: '0.2em', opacity: 0.5 }}>Loading…</div>
-        <div style={{ marginTop: '1.5rem', width: 48, height: 48, borderRadius: '50%' }} className="ld-spinner" />
+        <div ref={loadTxtRef} style={{ fontSize: '0.75rem', letterSpacing: '0.2em', opacity: 0.5, position: 'absolute', bottom: '40px' }}>Loading…</div>
+        <div style={{ marginTop: '1.5rem', width: 48, height: 48, borderRadius: '50%', position: 'absolute', bottom: '20px' }} className="ld-spinner" />
       </div>
 
       {/* Flower label */}
