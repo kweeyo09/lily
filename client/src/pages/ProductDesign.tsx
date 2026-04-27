@@ -32,6 +32,37 @@ export default function ProductDesign() {
         ← BACK
       </button>
 
+      {/* Mobile-only NEXT button */}
+      <button
+        onClick={() => setLocation('/ui-design')}
+        style={{
+          position: 'fixed', bottom: 'max(32px, env(safe-area-inset-bottom))', right: 'max(32px, env(safe-area-inset-right))',
+          background: 'transparent', border: '1px solid rgba(255,255,255,0.3)',
+          borderRadius: 4, color: '#fff', fontFamily: 'monospace',
+          fontSize: '0.75rem', letterSpacing: '0.15em', padding: '8px 16px',
+          cursor: 'pointer', transition: 'all 0.2s ease', zIndex: 100,
+          display: 'none',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.6)';
+          e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
+          e.currentTarget.style.color = '#fff';
+        }}
+      >
+        NEXT →
+      </button>
+
+      <style>{`
+        @media (max-width: 768px) {
+          button:last-of-type {
+            display: block !important;
+          }
+        }
+      `}</style>
+
       {/* Header */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', marginBottom: '60px', marginTop: '40px' }}>
         <h1 style={{
