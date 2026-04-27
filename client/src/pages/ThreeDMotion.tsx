@@ -32,16 +32,33 @@ export default function ThreeDMotion() {
         ← BACK
       </button>
 
+      <style>{`
+        @media (max-width: 768px) {
+          #next-btn-3d {
+            display: block !important;
+          }
+        }
+      `}</style>
+
       {/* Mobile-only NEXT button */}
       <button
-        data-mobile-next="true"
+        id="next-btn-3d"
         onClick={() => setLocation('/product-design')}
         style={{
-          position: 'fixed', bottom: 'max(32px, env(safe-area-inset-bottom))', right: 'max(32px, env(safe-area-inset-right))',
-          background: 'transparent', border: '1px solid rgba(255,255,255,0.3)',
-          borderRadius: 4, color: '#fff', fontFamily: 'monospace',
-          fontSize: '0.75rem', letterSpacing: '0.15em', padding: '8px 16px',
-          cursor: 'pointer', transition: 'all 0.2s ease', zIndex: 100,
+          position: 'fixed',
+          bottom: '32px',
+          right: '32px',
+          background: 'transparent',
+          border: '1px solid rgba(255,255,255,0.3)',
+          borderRadius: 4,
+          color: '#fff',
+          fontFamily: 'monospace',
+          fontSize: '0.75rem',
+          letterSpacing: '0.15em',
+          padding: '8px 16px',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          zIndex: 100,
           display: 'none',
         }}
         onMouseEnter={(e) => {
@@ -55,14 +72,6 @@ export default function ThreeDMotion() {
       >
         NEXT →
       </button>
-
-      <style>{`
-        @media (max-width: 768px) {
-          button[data-mobile-next="true"] {
-            display: block !important;
-          }
-        }
-      `}</style>
 
       {/* Header */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', marginBottom: '60px', marginTop: '40px' }}>
