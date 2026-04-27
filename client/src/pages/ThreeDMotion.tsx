@@ -34,6 +34,7 @@ export default function ThreeDMotion() {
 
       {/* Mobile-only NEXT button */}
       <button
+        data-mobile-next="true"
         onClick={() => setLocation('/product-design')}
         style={{
           position: 'fixed', bottom: 'max(32px, env(safe-area-inset-bottom))', right: 'max(32px, env(safe-area-inset-right))',
@@ -57,7 +58,7 @@ export default function ThreeDMotion() {
 
       <style>{`
         @media (max-width: 768px) {
-          button[onclick*="product-design"] {
+          button[data-mobile-next="true"] {
             display: block !important;
           }
         }

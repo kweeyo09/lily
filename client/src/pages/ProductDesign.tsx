@@ -34,6 +34,7 @@ export default function ProductDesign() {
 
       {/* Mobile-only NEXT button */}
       <button
+        data-mobile-next="true"
         onClick={() => setLocation('/ui-design')}
         style={{
           position: 'fixed', bottom: 'max(32px, env(safe-area-inset-bottom))', right: 'max(32px, env(safe-area-inset-right))',
@@ -57,7 +58,7 @@ export default function ProductDesign() {
 
       <style>{`
         @media (max-width: 768px) {
-          button[onclick*="ui-design"] {
+          button[data-mobile-next="true"] {
             display: block !important;
           }
         }

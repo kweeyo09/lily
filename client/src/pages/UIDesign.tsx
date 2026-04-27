@@ -34,6 +34,7 @@ export default function UIDesign() {
 
       {/* Mobile-only NEXT button */}
       <button
+        data-mobile-next="true"
         onClick={() => setLocation('/3d-motion')}
         style={{
           position: 'fixed', bottom: 'max(32px, env(safe-area-inset-bottom))', right: 'max(32px, env(safe-area-inset-right))',
@@ -57,7 +58,7 @@ export default function UIDesign() {
 
       <style>{`
         @media (max-width: 768px) {
-          button[onclick*="3d-motion"] {
+          button[data-mobile-next="true"] {
             display: block !important;
           }
         }
