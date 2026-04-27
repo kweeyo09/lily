@@ -32,42 +32,35 @@ export default function ProductDesign() {
         ← BACK
       </button>
 
-      <style>{`
-        @media (max-width: 768px) {
-          #next-btn-product {
-            display: block !important;
-          }
-        }
-      `}</style>
-
-      {/* Mobile-only NEXT button */}
+      {/* NEXT button - visible on all screens */}
       <button
-        id="next-btn-product"
         onClick={() => setLocation('/ui-design')}
         style={{
           position: 'fixed',
           bottom: '32px',
           right: '32px',
           background: 'transparent',
-          border: '1px solid rgba(255,255,255,0.3)',
+          border: '1px solid rgba(255,255,255,0.5)',
           borderRadius: 4,
           color: '#fff',
           fontFamily: 'monospace',
-          fontSize: '0.75rem',
+          fontSize: '0.85rem',
           letterSpacing: '0.15em',
-          padding: '8px 16px',
+          padding: '12px 20px',
           cursor: 'pointer',
           transition: 'all 0.2s ease',
-          zIndex: 100,
-          display: 'none',
+          zIndex: 1000,
+          display: 'block',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.6)';
-          e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
+          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.8)';
+          e.currentTarget.style.color = 'rgba(255,255,255,1)';
+          e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
+          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.5)';
           e.currentTarget.style.color = '#fff';
+          e.currentTarget.style.backgroundColor = 'transparent';
         }}
       >
         NEXT →
