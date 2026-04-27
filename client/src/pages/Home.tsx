@@ -610,17 +610,7 @@ export default function Home() {
       {/* Three.js canvas mount */}
       <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
 
-      {/* Loading overlay */}
-      <div ref={loadRef} style={{
-        position: 'absolute', inset: 0,
-        backgroundImage: 'url(https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/loading-screen-jxxgWx78yyeESAQ5S79tfn.webp)',
-        backgroundSize: 'cover', backgroundPosition: 'center',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        zIndex: 10, color: '#fff', fontFamily: 'monospace',
-      }}>
-        <div ref={loadTxtRef} style={{ fontSize: '0.75rem', letterSpacing: '0.2em', opacity: 0.5, position: 'absolute', bottom: '40px' }}>Loading…</div>
-        <div style={{ marginTop: '1.5rem', width: 48, height: 48, borderRadius: '50%', position: 'absolute', bottom: '20px' }} className="ld-spinner" />
-      </div>
+
 
       {/* Flower label */}
       <div ref={labelRef} style={{

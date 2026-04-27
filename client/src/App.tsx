@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import UIDesign from "./pages/UIDesign";
 import ThreeDMotion from "./pages/ThreeDMotion";
 import ProductDesign from "./pages/ProductDesign";
+import Loading from "./pages/Loading";
 
 
 
@@ -39,6 +40,7 @@ function App() {
       >
         <TooltipProvider>
           <Toaster />
+          <Loading />
           <Router />
         </TooltipProvider>
       </ThemeProvider>
