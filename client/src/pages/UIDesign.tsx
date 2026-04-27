@@ -57,7 +57,7 @@ export default function UIDesign() {
 
       <style>{`
         @media (max-width: 768px) {
-          button:last-of-type {
+          button[onclick*="3d-motion"] {
             display: block !important;
           }
         }

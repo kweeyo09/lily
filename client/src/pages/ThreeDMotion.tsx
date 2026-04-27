@@ -57,7 +57,7 @@ export default function ThreeDMotion() {
 
       <style>{`
         @media (max-width: 768px) {
-          button:last-of-type {
+          button[onclick*="product-design"] {
             display: block !important;
           }
         }

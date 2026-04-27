@@ -57,7 +57,7 @@ export default function ProductDesign() {
 
       <style>{`
         @media (max-width: 768px) {
-          button:last-of-type {
+          button[onclick*="ui-design"] {
             display: block !important;
           }
         }
