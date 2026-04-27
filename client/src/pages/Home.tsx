@@ -499,6 +499,31 @@ export default function Home() {
     };
     renderer.domElement.addEventListener('wheel', onWheel, { passive: true });
 
+    /* ── TOUCH SWIPE: cycle flowers on mobile ── */
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchCooldown = 0;
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const deltaX = touchEndX - touchStartX;
+      const deltaY = touchEndY - touchStartY;
+      const now = Date.now();
+      if (now < touchCooldown) return;
+      // Require at least 50px swipe and more horizontal than vertical
+      if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
+        touchCooldown = now + 700;
+        if (deltaX < 0) switchFlower('right');
+        else switchFlower('left');
+      }
+    };
+    renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: true });
+    renderer.domElement.addEventListener('touchend', onTouchEnd, { passive: true });
+
     /* ── CANVAS CLICK / TAP: scatter particles ── */
     const portfolioRoutes = ['/ui-design', '/3d-motion', '/product-design'];
     const onCanvasClick = () => {
@@ -565,6 +590,8 @@ export default function Home() {
       window.removeEventListener('resize', onResize);
       renderer.domElement.removeEventListener('wheel', onWheel);
       renderer.domElement.removeEventListener('click', onCanvasClick);
+      renderer.domElement.removeEventListener('touchstart', onTouchStart);
+      renderer.domElement.removeEventListener('touchend', onTouchEnd);
 
       controls.dispose();
       renderer.dispose();
@@ -606,36 +633,38 @@ export default function Home() {
 
 
 
-      {/* Centered bottom instructions */}
+      {/* Centered bottom instructions - responsive */}
       <div style={{
-        position: 'absolute', bottom: 60, left: '50%', transform: 'translateX(-50%)',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px',
+        position: 'absolute', bottom: 'max(40px, env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'clamp(12px, 3vw, 20px)',
         pointerEvents: 'none',
+        padding: '0 16px',
       }}>
-        {/* Scroll instruction row */}
+        {/* Scroll instruction row - responsive */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: '40px',
+          display: 'flex', alignItems: 'center', gap: 'clamp(16px, 5vw, 40px)',
           color: 'rgba(255,255,255,0.85)', fontFamily: 'monospace',
-          fontSize: '0.9rem', letterSpacing: '0.1em', fontWeight: '500',
+          fontSize: 'clamp(0.7rem, 2.5vw, 0.9rem)', letterSpacing: '0.1em', fontWeight: '500',
+          flexWrap: 'wrap', justifyContent: 'center',
         }}>
-          <span>Scroll down</span>
+          <span>Scroll / swipe</span>
           <div style={{
-            width: '24px', height: '32px', border: '1px solid rgba(255,255,255,0.5)',
-            borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            position: 'relative',
+            width: '20px', height: '28px', border: '1px solid rgba(255,255,255,0.5)',
+            borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            position: 'relative', flexShrink: 0,
           }}>
             <div style={{
-              width: '2px', height: '6px', background: 'rgba(255,255,255,0.7)',
+              width: '2px', height: '5px', background: 'rgba(255,255,255,0.7)',
               borderRadius: '1px',
               animation: 'scroll-bounce 2s infinite',
             }} />
           </div>
-          <span>to see projects</span>
+          <span>to explore</span>
         </div>
         {/* Click instruction */}
         <div style={{
           color: 'rgba(255,255,255,0.75)', fontFamily: 'monospace',
-          fontSize: '0.85rem', letterSpacing: '0.1em', fontWeight: '400',
+          fontSize: 'clamp(0.65rem, 2vw, 0.85rem)', letterSpacing: '0.1em', fontWeight: '400',
         }}>
           Click / tap to scatter
         </div>
@@ -648,27 +677,27 @@ export default function Home() {
         }
       `}</style>
 
-      {/* KIXIZ STUDIO - Left side */}
+      {/* KIXIZ STUDIO - Left side - responsive */}
       <div style={{
-        position: 'absolute', top: 32, left: 28,
+        position: 'absolute', top: 'max(16px, env(safe-area-inset-top))', left: 'max(16px, env(safe-area-inset-left))',
         color: '#fff', fontFamily: 'monospace',
-        fontSize: '1.8rem', letterSpacing: '0.2em', fontWeight: 'bold',
+        fontSize: 'clamp(1rem, 5vw, 1.8rem)', letterSpacing: '0.2em', fontWeight: 'bold',
         pointerEvents: 'none', whiteSpace: 'nowrap',
       }}>
         KIXIZ STUDIO
       </div>
 
-      {/* Right sidebar - About & Contact buttons */}
+      {/* Right sidebar - About & Contact buttons - responsive */}
       <div style={{
-        position: 'absolute', top: 32, right: 32,
-        display: 'flex', gap: '24px',
+        position: 'absolute', top: 'max(16px, env(safe-area-inset-top))', right: 'max(16px, env(safe-area-inset-right))',
+        display: 'flex', gap: 'clamp(8px, 3vw, 24px)', flexWrap: 'wrap', justifyContent: 'flex-end',
       }}>
         <button
           onClick={() => window.location.href = '/about'}
           style={{
             background: 'transparent', border: '1px solid rgba(255,255,255,0.3)',
             borderRadius: 4, color: '#fff', fontFamily: 'monospace',
-            fontSize: '0.75rem', letterSpacing: '0.15em', padding: '8px 16px',
+            fontSize: 'clamp(0.6rem, 2vw, 0.75rem)', letterSpacing: '0.15em', padding: 'clamp(6px, 1.5vw, 8px) clamp(10px, 2.5vw, 16px)',
             cursor: 'pointer', transition: 'all 0.2s ease',
           }}
           onMouseEnter={(e) => {
@@ -687,7 +716,7 @@ export default function Home() {
           style={{
             background: 'transparent', border: '1px solid rgba(255,255,255,0.3)',
             borderRadius: 4, color: '#fff', fontFamily: 'monospace',
-            fontSize: '0.75rem', letterSpacing: '0.15em', padding: '8px 16px',
+            fontSize: 'clamp(0.6rem, 2vw, 0.75rem)', letterSpacing: '0.15em', padding: 'clamp(6px, 1.5vw, 8px) clamp(10px, 2.5vw, 16px)',
             cursor: 'pointer', transition: 'all 0.2s ease',
           }}
           onMouseEnter={(e) => {
