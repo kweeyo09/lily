@@ -2,39 +2,36 @@ import { useEffect, useRef, useState } from 'react';
 
 export default function Loading() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [showContent, setShowContent] = useState(() => {
-    const hasShownLoading = sessionStorage.getItem('loadingScreenShown');
-    return !hasShownLoading;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(() => {
+    return !sessionStorage.getItem('loadingScreenShown');
   });
+  const [fading, setFading] = useState(false);
 
   useEffect(() => {
+    if (!visible) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
 
     // Falling petals
     interface Petal {
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      size: number;
-      rotation: number;
-      rotationSpeed: number;
-      opacity: number;
-      shape: number; // 0-1 for different petal shapes
+      x: number; y: number; vx: number; vy: number;
+      size: number; rotation: number; rotationSpeed: number;
+      opacity: number; shape: number;
     }
 
     const petals: Petal[] = [];
-    const petalCount = 12;
-
-    // Create petals
-    for (let i = 0; i < petalCount; i++) {
+    for (let i = 0; i < 12; i++) {
       petals.push({
         x: Math.random() * canvas.width,
         y: -50 - Math.random() * 200,
@@ -54,53 +51,40 @@ export default function Loading() {
       ctx.rotate(petal.rotation);
       ctx.globalAlpha = petal.opacity;
 
-      // Watercolor pink gradient
       const gradient = ctx.createLinearGradient(-petal.size * 0.5, -petal.size * 0.5, petal.size * 0.5, petal.size * 0.5);
       gradient.addColorStop(0, 'rgba(255, 182, 193, 0.8)');
       gradient.addColorStop(0.5, 'rgba(255, 192, 203, 0.6)');
       gradient.addColorStop(1, 'rgba(219, 112, 147, 0.4)');
       ctx.fillStyle = gradient;
 
-      // Draw petal shape based on shape value
       ctx.beginPath();
       if (petal.shape < 0.33) {
-        // Pointed petal
         ctx.ellipse(0, 0, petal.size * 0.3, petal.size * 0.8, 0, 0, Math.PI * 2);
       } else if (petal.shape < 0.66) {
-        // Round petal
         ctx.ellipse(0, 0, petal.size * 0.5, petal.size * 0.6, 0, 0, Math.PI * 2);
       } else {
-        // Curved petal
         ctx.moveTo(-petal.size * 0.3, -petal.size * 0.5);
         ctx.quadraticCurveTo(petal.size * 0.2, 0, -petal.size * 0.2, petal.size * 0.5);
         ctx.quadraticCurveTo(0, petal.size * 0.3, petal.size * 0.3, -petal.size * 0.5);
         ctx.closePath();
       }
       ctx.fill();
-
       ctx.restore();
     };
 
+    let animId: number;
     const animate = () => {
-      // Clear canvas
-      ctx.fillStyle = '#0f0f19';
+      ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Update and draw petals
       petals.forEach((petal, idx) => {
-        // Gentle horizontal drift
         petal.vx += (Math.random() - 0.5) * 0.02;
-        petal.vx = Math.max(-0.5, Math.min(0.5, petal.vx)); // Clamp drift
-
-        // Movement
+        petal.vx = Math.max(-0.5, Math.min(0.5, petal.vx));
         petal.x += petal.vx;
         petal.y += petal.vy;
         petal.rotation += petal.rotationSpeed;
-
-        // Draw petal
         drawPetal(petal);
 
-        // Reset petal when it goes off screen
         if (petal.y > canvas.height + 50) {
           petals[idx] = {
             x: Math.random() * canvas.width,
@@ -116,51 +100,55 @@ export default function Loading() {
         }
       });
 
-      requestAnimationFrame(animate);
+      animId = requestAnimationFrame(animate);
     };
-
     animate();
 
-    // Handle click to dismiss
-    const handleClick = () => {
-      setShowContent(false);
+    // Dismiss handler - fade out then hide
+    const dismiss = () => {
+      setFading(true);
       sessionStorage.setItem('loadingScreenShown', 'true');
+      setTimeout(() => {
+        setVisible(false);
+      }, 1200); // Wait for fade animation to complete
     };
 
-    window.addEventListener('click', handleClick);
+    window.addEventListener('click', dismiss);
 
-    // Auto-hide after 3 minutes (180000ms)
-    const timer = setTimeout(() => {
-      setShowContent(false);
-      sessionStorage.setItem('loadingScreenShown', 'true');
-    }, 180000);
+    // Auto-dismiss after 3 minutes
+    const timer = setTimeout(dismiss, 180000);
 
     return () => {
-      window.removeEventListener('click', handleClick);
+      window.removeEventListener('click', dismiss);
+      window.removeEventListener('resize', resize);
       clearTimeout(timer);
+      cancelAnimationFrame(animId);
     };
-  }, []);
+  }, [visible]);
 
-  if (!showContent) {
-    return <></>;
-  }
+  if (!visible) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100vw',
-      height: '100vh',
-      background: '#0f0f19',
-      zIndex: 9999,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      overflow: 'hidden',
-      cursor: 'pointer',
-    }}>
+    <div
+      ref={containerRef}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        background: '#000000',
+        zIndex: 9999,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        cursor: 'pointer',
+        opacity: fading ? 0 : 1,
+        transition: 'opacity 1.2s ease-out',
+      }}
+    >
       {/* Canvas for falling petals */}
       <canvas
         ref={canvasRef}
@@ -173,7 +161,7 @@ export default function Loading() {
         }}
       />
 
-      {/* Chinese characters - styled like brushstroke aesthetic */}
+      {/* Chinese characters */}
       <div style={{
         position: 'absolute',
         top: '50%',
@@ -183,50 +171,19 @@ export default function Loading() {
         gap: '1rem',
         zIndex: 10,
       }}>
-        <div style={{
-          fontSize: '5rem',
-          color: 'rgba(196, 69, 105, 0.4)',
-          fontWeight: 'bold',
-          fontFamily: 'serif',
-          letterSpacing: '0.05em',
-          textShadow: '2px 2px 0px rgba(0,0,0,0.3)',
-          fontStyle: 'italic',
-        }}>
-          瑶
-        </div>
-        <div style={{
-          fontSize: '5rem',
-          color: 'rgba(255, 107, 157, 0.4)',
-          fontWeight: 'bold',
-          fontFamily: 'serif',
-          letterSpacing: '0.05em',
-          textShadow: '2px 2px 0px rgba(0,0,0,0.3)',
-          fontStyle: 'italic',
-        }}>
-          草
-        </div>
-        <div style={{
-          fontSize: '5rem',
-          color: 'rgba(196, 69, 105, 0.4)',
-          fontWeight: 'bold',
-          fontFamily: 'serif',
-          letterSpacing: '0.05em',
-          textShadow: '2px 2px 0px rgba(0,0,0,0.3)',
-          fontStyle: 'italic',
-        }}>
-          琪
-        </div>
-        <div style={{
-          fontSize: '5rem',
-          color: 'rgba(255, 107, 157, 0.4)',
-          fontWeight: 'bold',
-          fontFamily: 'serif',
-          letterSpacing: '0.05em',
-          textShadow: '2px 2px 0px rgba(0,0,0,0.3)',
-          fontStyle: 'italic',
-        }}>
-          花
-        </div>
+        {['瑶', '草', '琪', '花'].map((char, i) => (
+          <div key={i} style={{
+            fontSize: 'clamp(3rem, 10vw, 5rem)',
+            color: i % 2 === 0 ? 'rgba(196, 69, 105, 0.4)' : 'rgba(255, 107, 157, 0.4)',
+            fontWeight: 'bold',
+            fontFamily: 'serif',
+            letterSpacing: '0.05em',
+            textShadow: '2px 2px 0px rgba(0,0,0,0.3)',
+            fontStyle: 'italic',
+          }}>
+            {char}
+          </div>
+        ))}
       </div>
 
       {/* Main content */}
@@ -241,7 +198,7 @@ export default function Loading() {
         zIndex: 20,
       }}>
         <div style={{
-          fontSize: '3.5rem',
+          fontSize: 'clamp(2rem, 8vw, 3.5rem)',
           fontWeight: 'bold',
           letterSpacing: '0.15em',
           marginBottom: '1rem',
@@ -249,7 +206,7 @@ export default function Loading() {
           KIKI ZHANG
         </div>
         <div style={{
-          fontSize: '0.9rem',
+          fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)',
           letterSpacing: '0.2em',
           opacity: 0.7,
         }}>
@@ -262,7 +219,7 @@ export default function Loading() {
         position: 'absolute',
         bottom: 40,
         color: 'rgba(255,255,255,0.3)',
-        fontSize: '0.7rem',
+        fontSize: 'clamp(0.6rem, 2vw, 0.7rem)',
         letterSpacing: '0.1em',
         zIndex: 20,
       }}>
