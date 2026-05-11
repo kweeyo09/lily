@@ -667,14 +667,20 @@ export default function Home() {
         }
       `}</style>
 
-      {/* KIXIZ STUDIO - Left side - responsive */}
+      {/* Logo - Left side */}
       <div style={{
-        position: 'absolute', top: 'max(16px, env(safe-area-inset-top))', left: 'max(16px, env(safe-area-inset-left))',
-        color: '#fff', fontFamily: 'monospace',
-        fontSize: 'clamp(1rem, 5vw, 1.8rem)', letterSpacing: '0.2em', fontWeight: 'bold',
-        pointerEvents: 'none', whiteSpace: 'nowrap',
+        position: 'absolute', top: 'max(12px, env(safe-area-inset-top))', left: 'max(12px, env(safe-area-inset-left))',
+        pointerEvents: 'none',
       }}>
-        KIXIZ STUDIO
+        <img
+          src="https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/kixiz-logo_ce4a8d4a.png"
+          alt="KIXIZ Studio"
+          style={{
+            width: 'clamp(40px, 8vw, 60px)',
+            height: 'auto',
+            opacity: 0.9,
+          }}
+        />
       </div>
 
       {/* Right sidebar - About & Contact buttons - responsive */}
