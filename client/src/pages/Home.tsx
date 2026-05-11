@@ -20,7 +20,8 @@
  * (avoids UV island seam bleed that causes wrong colours).
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import ResumeModal from '../components/ResumeModal';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -318,6 +319,7 @@ async function buildParticles(
 }
 /* ── MAIN COMPONENT ─────────────────────────────────────────────── */
 export default function Home() {
+  const [showResume, setShowResume] = useState(false);
   const mountRef      = useRef<HTMLDivElement>(null);
   const labelRef      = useRef<HTMLDivElement>(null);
   const loadRef       = useRef<HTMLDivElement>(null);
@@ -707,7 +709,7 @@ export default function Home() {
         </button>
         <button
           className="liquid-glass"
-          onClick={() => window.open('https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/KZCV26_f175d443.pdf', '_blank')}
+          onClick={() => setShowResume(true)}
           style={{
             borderRadius: 8, color: '#fff', fontFamily: "'Barlow', sans-serif",
             fontSize: 'clamp(0.6rem, 2vw, 0.75rem)', letterSpacing: '0.15em', padding: 'clamp(6px, 1.5vw, 8px) clamp(10px, 2.5vw, 16px)',
@@ -754,9 +756,11 @@ export default function Home() {
           e.currentTarget.style.boxShadow = '4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.15)';
         }}
       >
-        NEXT →
+         NEXT →
       </button>
 
+      {/* Resume PDF Modal */}
+      {showResume && <ResumeModal onClose={() => setShowResume(false)} />}
     </div>
   );
 }
