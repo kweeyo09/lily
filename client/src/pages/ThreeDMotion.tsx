@@ -7,44 +7,41 @@ export default function ThreeDMotion() {
     <div style={{
       width: '100vw', height: '100vh',
       background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%)',
-      color: '#fff', fontFamily: 'monospace',
+      color: '#fff', fontFamily: "'Barlow', sans-serif",
       overflow: 'auto', padding: '60px 40px',
     }}>
       {/* Back button */}
       <button
+        className="liquid-glass"
         onClick={() => setLocation('/')}
         style={{
           position: 'fixed', top: 32, left: 32,
-          background: 'transparent', border: '1px solid rgba(255,255,255,0.3)',
-          borderRadius: 4, color: '#fff', fontFamily: 'monospace',
+          borderRadius: 8, color: '#fff', fontFamily: "'Barlow', sans-serif",
           fontSize: '0.75rem', letterSpacing: '0.15em', padding: '8px 16px',
-          cursor: 'pointer', transition: 'all 0.2s ease', zIndex: 100,
+          cursor: 'pointer', transition: 'all 0.3s ease', zIndex: 100, fontWeight: '400',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.6)';
-          e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
+          e.currentTarget.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.2), 0 0 12px rgba(255,255,255,0.08)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
-          e.currentTarget.style.color = '#fff';
+          e.currentTarget.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.1)';
         }}
       >
         ← BACK
       </button>
 
-
-
       {/* Header */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', marginBottom: '60px', marginTop: '40px' }}>
         <h1 style={{
-          fontSize: '3rem', fontWeight: 'bold', marginBottom: '12px',
-          letterSpacing: '0.15em', color: '#fff',
+          fontSize: '3rem', fontFamily: "'Instrument Serif', serif", fontStyle: 'italic',
+          fontWeight: 'normal', marginBottom: '12px',
+          letterSpacing: '0.05em', color: '#fff',
         }}>
-          3D & MOTION
+          3D & Motion
         </h1>
         <p style={{
           fontSize: '0.9rem', color: 'rgba(255,255,255,0.6)',
-          letterSpacing: '0.1em', lineHeight: 1.8,
+          letterSpacing: '0.1em', lineHeight: 1.8, fontWeight: '300',
         }}>
           Immersive 3D models and dynamic motion graphics that bring ideas to life.
         </p>
@@ -56,26 +53,23 @@ export default function ThreeDMotion() {
         display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
         gap: '40px',
       }}>
-        {/* Placeholder cards for your work */}
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <div
             key={i}
+            className="liquid-glass"
             style={{
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: 8, padding: '24px', cursor: 'pointer',
               transition: 'all 0.3s ease',
               minHeight: '300px', display: 'flex', flexDirection: 'column',
               justifyContent: 'flex-end',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
               e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.2), 0 0 16px rgba(255,255,255,0.06)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
               e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.1)';
             }}
           >
             <div style={{
@@ -86,10 +80,10 @@ export default function ThreeDMotion() {
             }}>
               [Project Image]
             </div>
-            <h3 style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '8px' }}>
+            <h3 style={{ fontSize: '0.9rem', fontWeight: '500', marginBottom: '8px' }}>
               Project {i}
             </h3>
-            <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>
+            <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontWeight: '300' }}>
               Add your project description here
             </p>
           </div>
@@ -97,13 +91,12 @@ export default function ThreeDMotion() {
       </div>
 
       {/* Upload prompt */}
-      <div style={{
+      <div className="liquid-glass" style={{
         maxWidth: '1200px', margin: '80px auto 0',
-        padding: '40px', background: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
+        padding: '40px', borderRadius: 8,
         textAlign: 'center',
       }}>
-        <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.8 }}>
+        <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.8, fontWeight: '300' }}>
           Ready to showcase your 3D and motion work? Upload your projects and descriptions in the code.
         </p>
       </div>

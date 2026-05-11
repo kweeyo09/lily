@@ -616,7 +616,7 @@ export default function Home() {
       <div ref={labelRef} style={{
         position: 'absolute', top: '50%', left: '50%',
         transform: 'translate(-50%, -50%) translateY(-220px)',
-        color: '#fff', fontFamily: '"Noto Serif SC", serif',
+        color: '#fff', fontFamily: "'Instrument Serif', serif", fontStyle: 'italic',
         textAlign: 'center', pointerEvents: 'none', userSelect: 'none',
         transition: 'opacity 0.3s',
       }} />
@@ -633,8 +633,8 @@ export default function Home() {
         {/* Scroll instruction row - responsive */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 'clamp(16px, 5vw, 40px)',
-          color: 'rgba(255,255,255,0.85)', fontFamily: 'monospace',
-          fontSize: 'clamp(0.7rem, 2.5vw, 0.9rem)', letterSpacing: '0.1em', fontWeight: '500',
+          color: 'rgba(255,255,255,0.85)', fontFamily: "'Barlow', sans-serif",
+          fontSize: 'clamp(0.7rem, 2.5vw, 0.9rem)', letterSpacing: '0.1em', fontWeight: '400',
           flexWrap: 'wrap', justifyContent: 'center',
         }}>
           <span>Scroll / swipe</span>
@@ -653,8 +653,8 @@ export default function Home() {
         </div>
         {/* Click instruction */}
         <div style={{
-          color: 'rgba(255,255,255,0.75)', fontFamily: 'monospace',
-          fontSize: 'clamp(0.65rem, 2vw, 0.85rem)', letterSpacing: '0.1em', fontWeight: '400',
+          color: 'rgba(255,255,255,0.75)', fontFamily: "'Barlow', sans-serif",
+          fontSize: 'clamp(0.65rem, 2vw, 0.85rem)', letterSpacing: '0.1em', fontWeight: '300',
         }}>
           Click / tap to scatter
         </div>
@@ -689,39 +689,35 @@ export default function Home() {
         display: 'flex', gap: 'clamp(8px, 3vw, 24px)', flexWrap: 'wrap', justifyContent: 'flex-end',
       }}>
         <button
+          className="liquid-glass"
           onClick={() => window.location.href = '/about'}
           style={{
-            background: 'transparent', border: '1px solid rgba(255,255,255,0.3)',
-            borderRadius: 4, color: '#fff', fontFamily: 'monospace',
+            borderRadius: 8, color: '#fff', fontFamily: "'Barlow', sans-serif",
             fontSize: 'clamp(0.6rem, 2vw, 0.75rem)', letterSpacing: '0.15em', padding: 'clamp(6px, 1.5vw, 8px) clamp(10px, 2.5vw, 16px)',
-            cursor: 'pointer', transition: 'all 0.2s ease',
+            cursor: 'pointer', transition: 'all 0.3s ease', fontWeight: '400',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.6)';
-            e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
+            e.currentTarget.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.2), 0 0 12px rgba(255,255,255,0.08)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
-            e.currentTarget.style.color = '#fff';
+            e.currentTarget.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.1)';
           }}
         >
           ABOUT
         </button>
         <button
+          className="liquid-glass"
           onClick={() => window.location.href = '/contact'}
           style={{
-            background: 'transparent', border: '1px solid rgba(255,255,255,0.3)',
-            borderRadius: 4, color: '#fff', fontFamily: 'monospace',
+            borderRadius: 8, color: '#fff', fontFamily: "'Barlow', sans-serif",
             fontSize: 'clamp(0.6rem, 2vw, 0.75rem)', letterSpacing: '0.15em', padding: 'clamp(6px, 1.5vw, 8px) clamp(10px, 2.5vw, 16px)',
-            cursor: 'pointer', transition: 'all 0.2s ease',
+            cursor: 'pointer', transition: 'all 0.3s ease', fontWeight: '400',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.6)';
-            e.currentTarget.style.color = 'rgba(255,255,255,0.9)';
+            e.currentTarget.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.2), 0 0 12px rgba(255,255,255,0.08)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
-            e.currentTarget.style.color = '#fff';
+            e.currentTarget.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.1)';
           }}
         >
           CONTACT
@@ -730,6 +726,7 @@ export default function Home() {
 
       {/* NEXT button - bottom right - visible on all screens */}
       <button
+        className="liquid-glass-strong"
         onClick={() => {
           const event = new KeyboardEvent('keydown', { key: 'ArrowRight', code: 'ArrowRight' });
           window.dispatchEvent(event);
@@ -738,28 +735,23 @@ export default function Home() {
           position: 'fixed',
           bottom: 'max(32px, env(safe-area-inset-bottom))',
           right: 'max(32px, env(safe-area-inset-right))',
-          background: 'transparent',
-          border: '1px solid rgba(255,255,255,0.5)',
-          borderRadius: 4,
+          borderRadius: 8,
           color: '#fff',
-          fontFamily: 'monospace',
+          fontFamily: "'Barlow', sans-serif",
           fontSize: 'clamp(0.7rem, 2vw, 0.85rem)',
           letterSpacing: '0.15em',
           padding: 'clamp(8px, 1.5vw, 12px) clamp(12px, 2vw, 20px)',
           cursor: 'pointer',
-          transition: 'all 0.2s ease',
+          transition: 'all 0.3s ease',
           zIndex: 1000,
           display: 'block',
+          fontWeight: '400',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.8)';
-          e.currentTarget.style.color = 'rgba(255,255,255,1)';
-          e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
+          e.currentTarget.style.boxShadow = '4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.25), 0 0 16px rgba(255,255,255,0.08)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.5)';
-          e.currentTarget.style.color = '#fff';
-          e.currentTarget.style.backgroundColor = 'transparent';
+          e.currentTarget.style.boxShadow = '4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.15)';
         }}
       >
         NEXT →

@@ -194,12 +194,14 @@ export default function Loading() {
         transform: 'translate(-50%, -50%)',
         textAlign: 'center',
         color: '#fff',
-        fontFamily: 'monospace',
+        fontFamily: "'Barlow', sans-serif",
         zIndex: 20,
       }}>
         <div style={{
           fontSize: 'clamp(2rem, 8vw, 3.5rem)',
-          fontWeight: 'bold',
+          fontFamily: "'Instrument Serif', serif",
+          fontStyle: 'italic',
+          fontWeight: 'normal',
           letterSpacing: '0.15em',
           marginBottom: '1rem',
         }}>
@@ -207,6 +209,8 @@ export default function Loading() {
         </div>
         <div style={{
           fontSize: 'clamp(0.65rem, 2.5vw, 0.9rem)',
+          fontFamily: "'Barlow', sans-serif",
+          fontWeight: '300',
           letterSpacing: '0.2em',
           opacity: 0.7,
         }}>
@@ -220,6 +224,8 @@ export default function Loading() {
         bottom: 40,
         color: 'rgba(255,255,255,0.3)',
         fontSize: 'clamp(0.6rem, 2vw, 0.7rem)',
+        fontFamily: "'Barlow', sans-serif",
+        fontWeight: '300',
         letterSpacing: '0.1em',
         zIndex: 20,
       }}>
