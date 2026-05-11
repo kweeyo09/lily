@@ -1,86 +1,86 @@
 /**
- * CustomCursor
- * Design: dark elegant aesthetic — small white dot (precise) + larger ring (lagging follower)
- * On hover over interactive elements: ring expands, dot fades → "magnetic" feel
- * Uses requestAnimationFrame for smooth 60fps tracking with lerp easing on the ring.
+ * CustomCursor — Plumeria flower cursor
+ * Design: dark elegant aesthetic
+ * - Flower image follows the mouse with a smooth lerp lag
+ * - Slow continuous spin on hover over interactive elements
+ * - Slightly smaller at rest, scales up on hover
+ * - Touch devices skip this entirely
  */
 
 import { useEffect, useRef } from "react";
 
+const FLOWER_URL =
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/plumeria-cursor-FHeEbDTnJ2btCLPGf5qFqe.png";
+
 export default function CustomCursor() {
-  const dotRef = useRef<HTMLDivElement>(null);
-  const ringRef = useRef<HTMLDivElement>(null);
+  const cursorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Skip on touch-only devices
     if (window.matchMedia("(hover: none)").matches) return;
 
-    const dot = dotRef.current;
-    const ring = ringRef.current;
-    if (!dot || !ring) return;
+    const el = cursorRef.current;
+    if (!el) return;
 
-    let mouseX = -100;
-    let mouseY = -100;
-    let ringX = -100;
-    let ringY = -100;
+    let mouseX = -200;
+    let mouseY = -200;
+    let curX = -200;
+    let curY = -200;
     let rafId: number;
+    let rotation = 0;
     let isHovering = false;
+    let spinSpeed = 0; // degrees per frame
+    const TARGET_SPIN = 1.2; // deg/frame when hovering
+    const LERP_POS = 0.13;
+    const LERP_SPIN = 0.08;
 
     const onMouseMove = (e: MouseEvent) => {
       mouseX = e.clientX;
       mouseY = e.clientY;
     };
 
-    const onMouseEnterInteractive = () => {
+    const onEnter = () => {
       isHovering = true;
-      dot.style.opacity = "0";
-      dot.style.transform = "translate(-50%, -50%) scale(0)";
-      ring.style.width = "44px";
-      ring.style.height = "44px";
-      ring.style.borderColor = "rgba(255,255,255,0.9)";
-      ring.style.backgroundColor = "rgba(255,255,255,0.06)";
+      el.style.width = "52px";
+      el.style.height = "52px";
+      el.style.opacity = "0.95";
     };
 
-    const onMouseLeaveInteractive = () => {
+    const onLeave = () => {
       isHovering = false;
-      dot.style.opacity = "1";
-      dot.style.transform = "translate(-50%, -50%) scale(1)";
-      ring.style.width = "28px";
-      ring.style.height = "28px";
-      ring.style.borderColor = "rgba(255,255,255,0.55)";
-      ring.style.backgroundColor = "transparent";
+      el.style.width = "38px";
+      el.style.height = "38px";
+      el.style.opacity = "0.82";
     };
 
-    // Attach hover listeners to all interactive elements
     const interactiveSelectors =
       "a, button, [role='button'], input, select, textarea, label, [tabindex]";
 
     const attachListeners = () => {
-      document.querySelectorAll(interactiveSelectors).forEach((el) => {
-        el.addEventListener("mouseenter", onMouseEnterInteractive);
-        el.addEventListener("mouseleave", onMouseLeaveInteractive);
+      document.querySelectorAll(interactiveSelectors).forEach((node) => {
+        node.addEventListener("mouseenter", onEnter);
+        node.addEventListener("mouseleave", onLeave);
       });
     };
 
-    // Re-attach when DOM changes (e.g. modals open)
     const observer = new MutationObserver(attachListeners);
     observer.observe(document.body, { childList: true, subtree: true });
     attachListeners();
 
-    // Animation loop — dot snaps, ring lerps
     const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-    const LERP_FACTOR = 0.12;
 
     const animate = () => {
-      // Dot follows instantly
-      dot.style.left = mouseX + "px";
-      dot.style.top = mouseY + "px";
+      curX = lerp(curX, mouseX, LERP_POS);
+      curY = lerp(curY, mouseY, LERP_POS);
 
-      // Ring lerps toward mouse
-      ringX = lerp(ringX, mouseX, LERP_FACTOR);
-      ringY = lerp(ringY, mouseY, LERP_FACTOR);
-      ring.style.left = ringX + "px";
-      ring.style.top = ringY + "px";
+      // Spin: ease toward target speed
+      const targetSpeed = isHovering ? TARGET_SPIN : 0;
+      spinSpeed = lerp(spinSpeed, targetSpeed, LERP_SPIN);
+      rotation += spinSpeed;
+
+      el.style.left = curX + "px";
+      el.style.top = curY + "px";
+      el.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
 
       rafId = requestAnimationFrame(animate);
     };
@@ -92,52 +92,34 @@ export default function CustomCursor() {
       cancelAnimationFrame(rafId);
       document.removeEventListener("mousemove", onMouseMove);
       observer.disconnect();
-      document.querySelectorAll(interactiveSelectors).forEach((el) => {
-        el.removeEventListener("mouseenter", onMouseEnterInteractive);
-        el.removeEventListener("mouseleave", onMouseLeaveInteractive);
+      document.querySelectorAll(interactiveSelectors).forEach((node) => {
+        node.removeEventListener("mouseenter", onEnter);
+        node.removeEventListener("mouseleave", onLeave);
       });
     };
   }, []);
 
   return (
-    <>
-      {/* Precise dot */}
-      <div
-        ref={dotRef}
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "6px",
-          height: "6px",
-          borderRadius: "50%",
-          backgroundColor: "rgba(255,255,255,0.95)",
-          transform: "translate(-50%, -50%)",
-          pointerEvents: "none",
-          zIndex: 99999,
-          transition: "opacity 0.2s ease, transform 0.2s ease",
-          mixBlendMode: "difference",
-        }}
-      />
-      {/* Lagging ring */}
-      <div
-        ref={ringRef}
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "28px",
-          height: "28px",
-          borderRadius: "50%",
-          border: "1.5px solid rgba(255,255,255,0.55)",
-          backgroundColor: "transparent",
-          transform: "translate(-50%, -50%)",
-          pointerEvents: "none",
-          zIndex: 99998,
-          transition:
-            "width 0.25s ease, height 0.25s ease, border-color 0.25s ease, background-color 0.25s ease",
-        }}
-      />
-    </>
+    <div
+      ref={cursorRef}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "38px",
+        height: "38px",
+        backgroundImage: `url(${FLOWER_URL})`,
+        backgroundSize: "contain",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center",
+        transform: "translate(-50%, -50%)",
+        pointerEvents: "none",
+        zIndex: 99999,
+        opacity: 0.82,
+        filter: "drop-shadow(0 0 6px rgba(255, 220, 120, 0.45))",
+        transition: "width 0.25s ease, height 0.25s ease, opacity 0.25s ease",
+        willChange: "transform, left, top",
+      }}
+    />
   );
 }
