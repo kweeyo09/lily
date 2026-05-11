@@ -707,7 +707,7 @@ export default function Home() {
         </button>
         <button
           className="liquid-glass"
-          onClick={() => window.location.href = '/contact'}
+          onClick={() => window.open('https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/KZCV26_f175d443.pdf', '_blank')}
           style={{
             borderRadius: 8, color: '#fff', fontFamily: "'Barlow', sans-serif",
             fontSize: 'clamp(0.6rem, 2vw, 0.75rem)', letterSpacing: '0.15em', padding: 'clamp(6px, 1.5vw, 8px) clamp(10px, 2.5vw, 16px)',
@@ -720,7 +720,7 @@ export default function Home() {
             e.currentTarget.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.1)';
           }}
         >
-          CONTACT
+          RESUME
         </button>
       </div>
 
