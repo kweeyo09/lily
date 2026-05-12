@@ -7,6 +7,9 @@ import { useLocation } from 'wouter';
 const BUDGET_APP_SCREENSHOT =
   'https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/budget-app-full_7398ea43.png';
 
+// Tarot app preview — dark navy card spread
+const TAROT_PREVIEW = 'https://images.unsplash.com/photo-1601024445121-e5b82f020549?w=800&q=80';
+
 interface Project {
   id: number;
   title: string;
@@ -31,10 +34,13 @@ const projects: Project[] = [
   },
   {
     id: 2,
-    title: 'Project 2',
-    description: 'Add your project description here',
-    tags: [],
-    isPlaceholder: true,
+    title: 'Tarot Arcana',
+    description:
+      'An immersive tarot card experience featuring the complete 22 Major Arcana. Hover the arc spread to draw a card, flip to reveal its meaning, or browse the full deck with upright and reversed interpretations.',
+    tags: ['Interactive UI', 'Dark Design', 'Mystical'],
+    image: TAROT_PREVIEW,
+    link: '/tarot-arcana',
+    internal: true,
   },
   {
     id: 3,
