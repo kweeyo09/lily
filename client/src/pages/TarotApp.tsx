@@ -1,15 +1,27 @@
 /**
- * TarotApp — embeds the original tarot-arcana HTML app via iframe
- * All assets (JS, CSS) are served from CDN so the iframe loads correctly
+ * TarotApp — embeds the original tarot-arcana app via iframe srcdoc
+ * The entire app (HTML + inlined JS + CSS) is imported as a raw string
+ * and passed to srcdoc, so it renders correctly regardless of CDN headers.
  */
 
+import { useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-
-const TAROT_HTML_URL =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/tarot-arcana-final_54b92969.html";
+// @ts-ignore — Vite raw import
+import tarotHtml from "../tarot-standalone.html?raw";
 
 export default function TarotApp() {
   const [, setLocation] = useLocation();
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    // Write the HTML directly into the iframe document
+    const blob = new Blob([tarotHtml], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    iframe.src = url;
+    return () => URL.revokeObjectURL(url);
+  }, []);
 
   return (
     <div
@@ -67,9 +79,9 @@ export default function TarotApp() {
         </span>
       </div>
 
-      {/* Full-screen iframe of the original tarot app */}
+      {/* Full-screen iframe — blob URL bypasses CDN content-type issues */}
       <iframe
-        src={TAROT_HTML_URL}
+        ref={iframeRef}
         title="Tarot Arcana"
         style={{
           width: "100%",
@@ -78,7 +90,6 @@ export default function TarotApp() {
           flex: 1,
         }}
         allow="autoplay"
-        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
       />
     </div>
   );
