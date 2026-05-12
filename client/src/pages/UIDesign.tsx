@@ -5,7 +5,7 @@ import { useLocation } from 'wouter';
 // First card: Budget App (real project), rest are placeholders
 
 const BUDGET_APP_SCREENSHOT =
-  'https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/budget-app-full_7398ea43.png';
+  'https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/budget-app-full_9f9cebd2.png';
 
 // Tarot app preview — generated dark mystical card spread UI
 const TAROT_PREVIEW = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/tarot-card-preview-RR4gEDtoDyDDUyE4yoqS5d.webp';
@@ -189,23 +189,7 @@ export default function UIDesign() {
                 </span>
               )}
 
-              {/* Live link badge */}
-              {project.link && (
-                <div style={{
-                  position: 'absolute', top: 12, right: 12,
-                  background: 'rgba(0,0,0,0.55)',
-                  backdropFilter: 'blur(8px)',
-                  border: '1px solid rgba(255,255,255,0.18)',
-                  borderRadius: 20,
-                  padding: '4px 10px',
-                  fontSize: '0.65rem',
-                  letterSpacing: '0.12em',
-                  color: 'rgba(255,255,255,0.85)',
-                  fontWeight: '500',
-                }}>
-                  LIVE ↗
-                </div>
-              )}
+
             </div>
 
             {/* Text content */}
