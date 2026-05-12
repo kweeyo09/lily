@@ -1,44 +1,17 @@
 /**
- * TarotApp — embeds the original tarot-arcana app via iframe blob URL
- * The standalone HTML (JS+CSS inlined) is fetched from /tarot-app.txt
- * and turned into a blob URL so the iframe renders it correctly.
+ * TarotApp — embeds the original tarot-arcana app via iframe
+ * The standalone HTML (JS+CSS inlined) is served by the Express backend
+ * at /tarot-static with the correct text/html content-type.
+ * This bypasses Vite's SPA fallback which would otherwise intercept the route.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 
 export default function TarotApp() {
   const [, setLocation] = useLocation();
-  const iframeRef = useRef<HTMLIFrameElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-
-  useEffect(() => {
-    let objectUrl: string | null = null;
-
-    fetch("/tarot-app.txt")
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.text();
-      })
-      .then((html) => {
-        const blob = new Blob([html], { type: "text/html" });
-        objectUrl = URL.createObjectURL(blob);
-        if (iframeRef.current) {
-          iframeRef.current.src = objectUrl;
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to load tarot app:", err);
-        setError(true);
-        setLoading(false);
-      });
-
-    return () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, []);
 
   return (
     <div
@@ -97,7 +70,7 @@ export default function TarotApp() {
       </div>
 
       {/* Loading state */}
-      {loading && (
+      {loading && !error && (
         <div
           style={{
             position: "absolute",
@@ -136,9 +109,9 @@ export default function TarotApp() {
         </div>
       )}
 
-      {/* Full-screen iframe */}
+      {/* Full-screen iframe pointing to the Express backend route */}
       <iframe
-        ref={iframeRef}
+        src="/tarot-static"
         title="Tarot Arcana"
         style={{
           width: "100%",
@@ -150,6 +123,10 @@ export default function TarotApp() {
         }}
         allow="autoplay"
         onLoad={() => setLoading(false)}
+        onError={() => {
+          setError(true);
+          setLoading(false);
+        }}
       />
     </div>
   );
