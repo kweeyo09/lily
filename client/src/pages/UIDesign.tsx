@@ -7,8 +7,8 @@ import { useLocation } from 'wouter';
 const BUDGET_APP_SCREENSHOT =
   'https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/budget-app-full_7398ea43.png';
 
-// Tarot app preview — dark navy card spread
-const TAROT_PREVIEW = 'https://images.unsplash.com/photo-1601024445121-e5b82f020549?w=800&q=80';
+// Tarot app preview — generated dark mystical card spread UI
+const TAROT_PREVIEW = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/tarot-card-preview-RR4gEDtoDyDDUyE4yoqS5d.webp';
 
 interface Project {
   id: number;
