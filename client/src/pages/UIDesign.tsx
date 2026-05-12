@@ -1,14 +1,83 @@
 import { useLocation } from 'wouter';
 
+// ─── Design: dark elegant, Instrument Serif italic headings, Barlow body ───
+// Cards use liquid-glass utility class from index.css
+// First card: Budget App (real project), rest are placeholders
+
+const BUDGET_APP_SCREENSHOT =
+  'https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/budget-app-full_7398ea43.png';
+
+const BUDGET_APP_URL = 'https://budgetapp-kstzuauh.manus.space';
+
+interface Project {
+  id: number;
+  title: string;
+  description: string;
+  tags: string[];
+  image?: string;
+  link?: string;
+  isPlaceholder?: boolean;
+}
+
+const projects: Project[] = [
+  {
+    id: 1,
+    title: 'Budget App',
+    description:
+      'A mobile budgeting app with real-time spending tracking, category breakdowns, and progress indicators. Features a clean component library with a blue-dominant palette and Caveat + Inter typography system.',
+    tags: ['Mobile UI', 'Design System', 'Finance'],
+    image: BUDGET_APP_SCREENSHOT,
+    link: BUDGET_APP_URL,
+  },
+  {
+    id: 2,
+    title: 'Project 2',
+    description: 'Add your project description here',
+    tags: [],
+    isPlaceholder: true,
+  },
+  {
+    id: 3,
+    title: 'Project 3',
+    description: 'Add your project description here',
+    tags: [],
+    isPlaceholder: true,
+  },
+  {
+    id: 4,
+    title: 'Project 4',
+    description: 'Add your project description here',
+    tags: [],
+    isPlaceholder: true,
+  },
+  {
+    id: 5,
+    title: 'Project 5',
+    description: 'Add your project description here',
+    tags: [],
+    isPlaceholder: true,
+  },
+  {
+    id: 6,
+    title: 'Project 6',
+    description: 'Add your project description here',
+    tags: [],
+    isPlaceholder: true,
+  },
+];
+
 export default function UIDesign() {
   const [, setLocation] = useLocation();
 
   return (
     <div style={{
-      width: '100vw', height: '100vh',
-      background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%)',
-      color: '#fff', fontFamily: "'Barlow', sans-serif",
-      overflow: 'auto', padding: '60px 40px',
+      width: '100vw',
+      minHeight: '100vh',
+      background: '#000',
+      color: '#fff',
+      fontFamily: "'Barlow', sans-serif",
+      overflow: 'auto',
+      padding: '60px 40px',
     }}>
       {/* Back button */}
       <button
@@ -18,7 +87,7 @@ export default function UIDesign() {
           position: 'fixed', top: 32, left: 32,
           borderRadius: 8, color: '#fff', fontFamily: "'Barlow', sans-serif",
           fontSize: '0.75rem', letterSpacing: '0.15em', padding: '8px 16px',
-          cursor: 'pointer', transition: 'all 0.3s ease', zIndex: 100, fontWeight: '400',
+          transition: 'all 0.3s ease', zIndex: 100, fontWeight: '400',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.2), 0 0 12px rgba(255,255,255,0.08)';
@@ -33,9 +102,13 @@ export default function UIDesign() {
       {/* Header */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', marginBottom: '60px', marginTop: '40px' }}>
         <h1 style={{
-          fontSize: '3rem', fontFamily: "'Instrument Serif', serif", fontStyle: 'italic',
-          fontWeight: 'normal', marginBottom: '12px',
-          letterSpacing: '0.05em', color: '#fff',
+          fontSize: 'clamp(2rem, 5vw, 3rem)',
+          fontFamily: "'Instrument Serif', serif",
+          fontStyle: 'italic',
+          fontWeight: 'normal',
+          marginBottom: '12px',
+          letterSpacing: '0.05em',
+          color: '#fff',
         }}>
           UI Design
         </h1>
@@ -50,56 +123,129 @@ export default function UIDesign() {
       {/* Portfolio Grid */}
       <div style={{
         maxWidth: '1200px', margin: '0 auto',
-        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-        gap: '40px',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        gap: '32px',
       }}>
-        {[1, 2, 3, 4, 5, 6].map((i) => (
+        {projects.map((project) => (
           <div
-            key={i}
+            key={project.id}
             className="liquid-glass"
+            onClick={() => {
+              if (project.link) window.open(project.link, '_blank');
+            }}
             style={{
-              borderRadius: 8, padding: '24px', cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              minHeight: '300px', display: 'flex', flexDirection: 'column',
-              justifyContent: 'flex-end',
+              borderRadius: 12,
+              overflow: 'hidden',
+              transition: 'all 0.35s ease',
+              display: 'flex',
+              flexDirection: 'column',
+              cursor: project.link ? 'pointer' : 'default',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.2), 0 0 16px rgba(255,255,255,0.06)';
+              e.currentTarget.style.transform = 'translateY(-6px)';
+              e.currentTarget.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.2), 0 0 24px rgba(255,255,255,0.06)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = 'inset 0 1px 1px rgba(255,255,255,0.1)';
             }}
           >
+            {/* Image area */}
             <div style={{
-              width: '100%', height: '200px', background: 'rgba(255,255,255,0.02)',
-              borderRadius: 4, marginBottom: '16px', display: 'flex',
-              alignItems: 'center', justifyContent: 'center',
-              color: 'rgba(255,255,255,0.3)', fontSize: '0.8rem',
+              width: '100%',
+              height: '260px',
+              background: project.isPlaceholder ? 'rgba(255,255,255,0.02)' : 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+              position: 'relative',
             }}>
-              [Project Image]
+              {project.image ? (
+                <img
+                  src={project.image}
+                  alt={project.title}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition: 'top',
+                    display: 'block',
+                  }}
+                />
+              ) : (
+                <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.8rem', letterSpacing: '0.1em' }}>
+                  [Project Image]
+                </span>
+              )}
+
+              {/* Live link badge */}
+              {project.link && (
+                <div style={{
+                  position: 'absolute', top: 12, right: 12,
+                  background: 'rgba(0,0,0,0.55)',
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255,255,255,0.18)',
+                  borderRadius: 20,
+                  padding: '4px 10px',
+                  fontSize: '0.65rem',
+                  letterSpacing: '0.12em',
+                  color: 'rgba(255,255,255,0.85)',
+                  fontWeight: '500',
+                }}>
+                  LIVE ↗
+                </div>
+              )}
             </div>
-            <h3 style={{ fontSize: '0.9rem', fontWeight: '500', marginBottom: '8px' }}>
-              Project {i}
-            </h3>
-            <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontWeight: '300' }}>
-              Add your project description here
-            </p>
+
+            {/* Text content */}
+            <div style={{ padding: '20px 22px 24px' }}>
+              <h3 style={{
+                fontSize: '1rem',
+                fontFamily: "'Instrument Serif', serif",
+                fontStyle: 'italic',
+                fontWeight: 'normal',
+                marginBottom: '8px',
+                color: '#fff',
+              }}>
+                {project.title}
+              </h3>
+              <p style={{
+                fontSize: '0.78rem',
+                color: 'rgba(255,255,255,0.55)',
+                fontWeight: '300',
+                lineHeight: 1.7,
+                marginBottom: project.tags.length ? '14px' : 0,
+              }}>
+                {project.description}
+              </p>
+
+              {/* Tags */}
+              {project.tags.length > 0 && (
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {project.tags.map((tag) => (
+                    <span key={tag} style={{
+                      fontSize: '0.65rem',
+                      letterSpacing: '0.1em',
+                      color: 'rgba(255,255,255,0.45)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: 20,
+                      padding: '3px 10px',
+                      fontWeight: '400',
+                    }}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Upload prompt */}
-      <div className="liquid-glass" style={{
-        maxWidth: '1200px', margin: '80px auto 0',
-        padding: '40px', borderRadius: 8,
-        textAlign: 'center',
-      }}>
-        <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.8, fontWeight: '300' }}>
-          Ready to showcase your UI design work? Upload your projects and descriptions in the code.
-        </p>
-      </div>
+      {/* Bottom spacer */}
+      <div style={{ height: '80px' }} />
     </div>
   );
 }
