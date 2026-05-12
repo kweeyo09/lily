@@ -1,12 +1,8 @@
 import { useLocation } from 'wouter';
 
 // ─── Budget App: Component Library embed via iframe ───────────────────────────
-// The budgeting-app-component-library.html is hosted on CDN and embedded
-// full-screen inside a portfolio wrapper with a back button overlay.
+// budget-app.html is served from /public so Vite hosts it at /budget-app.html
 // ─────────────────────────────────────────────────────────────────────────────
-
-const COMPONENT_LIBRARY_URL =
-  'https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/budgeting-app-component-library_adf522f7.html';
 
 export default function BudgetApp() {
   const [, setLocation] = useLocation();
@@ -62,13 +58,14 @@ export default function BudgetApp() {
         letterSpacing: '0.2em',
         fontFamily: "'Barlow', sans-serif",
         fontWeight: '300',
+        pointerEvents: 'none',
       }}>
         UI DESIGN · CASE STUDY
       </div>
 
-      {/* Full-screen iframe */}
+      {/* Full-screen iframe — served from /public */}
       <iframe
-        src={COMPONENT_LIBRARY_URL}
+        src="/budget-app.html"
         title="Budgeting App Component Library"
         style={{
           width: '100%',
