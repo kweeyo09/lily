@@ -10,6 +10,7 @@ import UIDesign from "./pages/UIDesign";
 import ThreeDMotion from "./pages/ThreeDMotion";
 import ProductDesign from "./pages/ProductDesign";
 import Loading from "./pages/Loading";
+import BudgetApp from "./pages/BudgetApp";
 
 
 
@@ -20,6 +21,7 @@ function Router() {
       <Route path={"/ui-design"} component={UIDesign} />
       <Route path={"/3d-motion"} component={ThreeDMotion} />
       <Route path={"/product-design"} component={ProductDesign} />
+      <Route path={"/budget-app"} component={BudgetApp} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

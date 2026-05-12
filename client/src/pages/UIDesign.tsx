@@ -7,8 +7,6 @@ import { useLocation } from 'wouter';
 const BUDGET_APP_SCREENSHOT =
   'https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/budget-app-full_7398ea43.png';
 
-const BUDGET_APP_URL = 'https://budgetapp-kstzuauh.manus.space';
-
 interface Project {
   id: number;
   title: string;
@@ -16,6 +14,7 @@ interface Project {
   tags: string[];
   image?: string;
   link?: string;
+  internal?: boolean;
   isPlaceholder?: boolean;
 }
 
@@ -27,7 +26,8 @@ const projects: Project[] = [
       'A mobile budgeting app with real-time spending tracking, category breakdowns, and progress indicators. Features a clean component library with a blue-dominant palette and Caveat + Inter typography system.',
     tags: ['Mobile UI', 'Design System', 'Finance'],
     image: BUDGET_APP_SCREENSHOT,
-    link: BUDGET_APP_URL,
+    link: '/budget-app',
+  internal: true,
   },
   {
     id: 2,
@@ -132,7 +132,10 @@ export default function UIDesign() {
             key={project.id}
             className="liquid-glass"
             onClick={() => {
-              if (project.link) window.open(project.link, '_blank');
+              if (project.link) {
+                if (project.internal) setLocation(project.link);
+                else window.open(project.link, '_blank');
+              }
             }}
             style={{
               borderRadius: 12,
