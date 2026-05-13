@@ -21,3 +21,5 @@
 - [x] Updated ProductDesign.tsx with Red Bull as first real project card
 - [x] Added /product-design/redbull route to App.tsx
 - [x] Replaced Red Bull video with new version (redbull-v2) and enabled audio with controls
+- [x] Fixed cursor tracking over tarot iframe: transparent overlay captures mousemove, relays to document for CustomCursor + postMessage to iframe for card interactions
+- [x] Injected postMessage listener into tarot app index.html to re-dispatch forwarded events on iframe's own document

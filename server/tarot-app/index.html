@@ -30,6 +30,18 @@
         cursor: none !important;
       }
     </style>
+    <!-- Cursor relay: receives forwarded mouse events from parent portfolio -->
+    <script>
+      window.addEventListener('message', function(e) {
+        var d = e.data;
+        if (!d || d.type !== 'cursor-relay') return;
+        var el = document.elementFromPoint(d.clientX, d.clientY);
+        if (!el) el = document.body;
+        var init = { bubbles: true, cancelable: true, clientX: d.clientX, clientY: d.clientY, button: d.button || 0, buttons: (d.eventType === 'mousedown') ? 1 : 0, view: window };
+        el.dispatchEvent(new MouseEvent(d.eventType, init));
+        if (d.eventType === 'mousemove') document.dispatchEvent(new MouseEvent('mousemove', init));
+      });
+    </script>
     <script type="module" crossorigin src="./assets/index-CITzkABF.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-CQbjIkn2.css">
     <script src="./assets/debug-collector.js" defer></script>
