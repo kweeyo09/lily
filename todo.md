@@ -26,3 +26,4 @@
 - [x] Created KeyboardProject.tsx — video hero + 3 render images (same layout as Red Bull)
 - [x] Added Keyboard Commercial card to ProductDesign.tsx as second project
 - [x] Added /product-design/keyboard route to App.tsx
+- [x] Removed all placeholder project cards from ProductDesign, UIDesign, and ThreeDMotion pages

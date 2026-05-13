@@ -42,34 +42,7 @@ const projects: Project[] = [
     link: '/tarot-arcana',
     internal: true,
   },
-  {
-    id: 3,
-    title: 'Project 3',
-    description: 'Add your project description here',
-    tags: [],
-    isPlaceholder: true,
-  },
-  {
-    id: 4,
-    title: 'Project 4',
-    description: 'Add your project description here',
-    tags: [],
-    isPlaceholder: true,
-  },
-  {
-    id: 5,
-    title: 'Project 5',
-    description: 'Add your project description here',
-    tags: [],
-    isPlaceholder: true,
-  },
-  {
-    id: 6,
-    title: 'Project 6',
-    description: 'Add your project description here',
-    tags: [],
-    isPlaceholder: true,
-  },
+
 ];
 
 export default function UIDesign() {
