@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 // ─── Design: dark elegant, Instrument Serif italic headings, Barlow body ───
 
 const REDBULL_THUMBNAIL = '/manus-storage/0072_df56ea18.png';
+const KEYBOARD_THUMBNAIL = '/manus-storage/0001_0dc6c9dd.png';
 
 interface Project {
   id: number;
@@ -28,10 +29,13 @@ const projects: Project[] = [
   },
   {
     id: 2,
-    title: 'Project 2',
-    description: 'Add your project description here',
-    tags: [],
-    isPlaceholder: true,
+    title: 'Keyboard Commercial',
+    description:
+      'A 3D product commercial for a custom mechanical keyboard — anodised aluminium housing, POM switches, and a cinematic exploded-view sequence rendered in Blender.',
+    tags: ['3D Render', 'Product Vis', 'Blender'],
+    image: KEYBOARD_THUMBNAIL,
+    link: '/product-design/keyboard',
+    internal: true,
   },
   {
     id: 3,

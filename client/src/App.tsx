@@ -13,6 +13,7 @@ import Loading from "./pages/Loading";
 import BudgetApp from "./pages/BudgetApp";
 import TarotApp from "./pages/TarotApp";
 import RedBullProject from "./pages/RedBullProject";
+import KeyboardProject from "./pages/KeyboardProject";
 
 
 function Router() {
@@ -26,6 +27,7 @@ function Router() {
       <Route path={"/budget-app"} component={BudgetApp} />
       <Route path={"/tarot-arcana"} component={TarotApp} />
       <Route path={"/product-design/redbull"} component={RedBullProject} />
+      <Route path={"/product-design/keyboard"} component={KeyboardProject} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

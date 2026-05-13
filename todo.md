@@ -23,3 +23,6 @@
 - [x] Replaced Red Bull video with new version (redbull-v2) and enabled audio with controls
 - [x] Fixed cursor tracking over tarot iframe: transparent overlay captures mousemove, relays to document for CustomCursor + postMessage to iframe for card interactions
 - [x] Injected postMessage listener into tarot app index.html to re-dispatch forwarded events on iframe's own document
+- [x] Created KeyboardProject.tsx — video hero + 3 render images (same layout as Red Bull)
+- [x] Added Keyboard Commercial card to ProductDesign.tsx as second project
+- [x] Added /product-design/keyboard route to App.tsx
