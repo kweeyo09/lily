@@ -20,3 +20,4 @@
 - [x] Built Red Bull product design project page (video hero + two render images)
 - [x] Updated ProductDesign.tsx with Red Bull as first real project card
 - [x] Added /product-design/redbull route to App.tsx
+- [x] Replaced Red Bull video with new version (redbull-v2) and enabled audio with controls

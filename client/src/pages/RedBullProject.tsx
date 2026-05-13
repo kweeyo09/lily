@@ -5,7 +5,7 @@
 
 import { useLocation } from 'wouter';
 
-const REDBULL_VIDEO = '/manus-storage/redbull_e597ca33.mp4';
+const REDBULL_VIDEO = '/manus-storage/redbull-v2_340151ae.mp4';
 const REDBULL_IMG_1 = '/manus-storage/0072_df56ea18.png'; // three cans studio shot
 const REDBULL_IMG_2 = '/manus-storage/0052_400eda6f.png'; // ice splash close-up
 
@@ -90,8 +90,8 @@ export default function RedBullProject() {
           src={REDBULL_VIDEO}
           autoPlay
           loop
-          muted
           playsInline
+          controls
           style={{
             width: '100%',
             display: 'block',
