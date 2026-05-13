@@ -1,6 +1,5 @@
 import "dotenv/config";
 import path from "path";
-import fs from "fs";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
@@ -39,21 +38,15 @@ async function startServer() {
   registerStorageProxy(app);
   registerOAuthRoutes(app);
 
-  // Serve the self-contained tarot app at /tarot-static with correct HTML content-type
-  // This bypasses Vite's SPA fallback which would otherwise intercept the route
-  app.get("/tarot-static", (_req, res) => {
-    const tarotPath = path.resolve(
-      path.dirname(new URL(import.meta.url).pathname),
-      "../tarot-static/index.html"
-    );
-    if (fs.existsSync(tarotPath)) {
-      res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.setHeader("X-Frame-Options", "SAMEORIGIN");
-      res.sendFile(tarotPath);
-    } else {
-      res.status(404).send("Tarot app not found");
-    }
-  });
+  // Serve the original tarot app export under /tarot-app/
+  // The export has index.html + assets/ folder with relative paths (./assets/...)
+  // We serve the whole directory as static files BEFORE Vite middleware so
+  // Vite never intercepts these routes.
+  const tarotAppDir = path.resolve(
+    path.dirname(new URL(import.meta.url).pathname),
+    "../tarot-app"
+  );
+  app.use("/tarot-app", express.static(tarotAppDir, { index: "index.html" }));
 
   // tRPC API
   app.use(

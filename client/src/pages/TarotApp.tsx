@@ -1,8 +1,13 @@
 /**
- * TarotApp — embeds the original tarot-arcana app via iframe
- * The standalone HTML (JS+CSS inlined) is served by the Express backend
- * at /tarot-static with the correct text/html content-type.
- * This bypasses Vite's SPA fallback which would otherwise intercept the route.
+ * TarotApp — embeds the original tarot-arcana app via iframe.
+ *
+ * The original export (index.html + assets/) is served by Express
+ * as static files under /tarot-app/.  Asset paths in index.html were
+ * patched to relative paths (./assets/...) so they resolve correctly
+ * relative to /tarot-app/.
+ *
+ * This is registered BEFORE Vite middleware in server/_core/index.ts,
+ * so Vite never intercepts these routes.
  */
 
 import { useState } from "react";
@@ -11,14 +16,13 @@ import { useLocation } from "wouter";
 export default function TarotApp() {
   const [, setLocation] = useLocation();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
 
   return (
     <div
       style={{
         position: "fixed",
         inset: 0,
-        background: "#0a0a12",
+        background: "#0e0818",
         display: "flex",
         flexDirection: "column",
       }}
@@ -70,7 +74,7 @@ export default function TarotApp() {
       </div>
 
       {/* Loading state */}
-      {loading && !error && (
+      {loading && (
         <div
           style={{
             position: "absolute",
@@ -83,35 +87,16 @@ export default function TarotApp() {
             fontSize: "0.8rem",
             letterSpacing: "0.3em",
             zIndex: 5,
+            background: "#0e0818",
           }}
         >
           LOADING · · ·
         </div>
       )}
 
-      {/* Error state */}
-      {error && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "rgba(255,100,100,0.7)",
-            fontFamily: "serif",
-            fontSize: "0.8rem",
-            letterSpacing: "0.2em",
-            zIndex: 5,
-          }}
-        >
-          Failed to load — please refresh
-        </div>
-      )}
-
-      {/* Full-screen iframe pointing to the Express backend route */}
+      {/* Full-screen iframe pointing to the Express-served tarot app */}
       <iframe
-        src="/tarot-static"
+        src="/tarot-app/"
         title="Tarot Arcana"
         style={{
           width: "100%",
@@ -119,14 +104,10 @@ export default function TarotApp() {
           border: "none",
           flex: 1,
           opacity: loading ? 0 : 1,
-          transition: "opacity 0.4s ease",
+          transition: "opacity 0.5s ease",
         }}
         allow="autoplay"
         onLoad={() => setLoading(false)}
-        onError={() => {
-          setError(true);
-          setLoading(false);
-        }}
       />
     </div>
   );
