@@ -17,3 +17,6 @@
 - [x] Verified tarot app renders correctly: full arc card spread, all 78 cards, dark mystical design
 - [x] Fixed cursor issue: injected cursor:none into tarot app's index.html so system cursor is hidden inside iframe
 - [x] Set tarot thumbnail to user-provided screenshot (01-hero-spread.png)
+- [x] Built Red Bull product design project page (video hero + two render images)
+- [x] Updated ProductDesign.tsx with Red Bull as first real project card
+- [x] Added /product-design/redbull route to App.tsx
