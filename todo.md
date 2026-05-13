@@ -15,3 +15,5 @@
 - [x] Patched wouter base in index-CITzkABF.js from "" to "/tarot-app" so router matches correctly
 - [x] Removed ugly generated tarot thumbnail from UIDesign page
 - [x] Verified tarot app renders correctly: full arc card spread, all 78 cards, dark mystical design
+- [x] Fixed cursor issue: injected cursor:none into tarot app's index.html so system cursor is hidden inside iframe
+- [x] Set tarot thumbnail to user-provided screenshot (01-hero-spread.png)

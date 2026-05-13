@@ -7,6 +7,8 @@ import { useLocation } from 'wouter';
 const BUDGET_APP_SCREENSHOT =
   'https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/budget-app-full_9f9cebd2.png';
 
+const TAROT_THUMBNAIL = '/manus-storage/01-hero-spread_21519680.png';
+
 
 interface Project {
   id: number;
@@ -36,6 +38,7 @@ const projects: Project[] = [
     description:
       'An immersive tarot card experience featuring the complete 22 Major Arcana. Hover the arc spread to draw a card, flip to reveal its meaning, or browse the full deck with upright and reversed interpretations.',
     tags: ['Interactive UI', 'Dark Design', 'Mystical'],
+    image: TAROT_THUMBNAIL,
     link: '/tarot-arcana',
     internal: true,
   },
