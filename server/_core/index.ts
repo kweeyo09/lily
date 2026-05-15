@@ -42,10 +42,9 @@ async function startServer() {
   // The export has index.html + assets/ folder with relative paths (./assets/...)
   // We serve the whole directory as static files BEFORE Vite middleware so
   // Vite never intercepts these routes.
-  const tarotAppDir = path.resolve(
-    path.dirname(new URL(import.meta.url).pathname),
-    "../tarot-app"
-  );
+  // Use process.cwd() (always the project root) so the path works in both
+  // dev (tsx watch server/_core/index.ts) and production (dist/index.js).
+  const tarotAppDir = path.resolve(process.cwd(), "server/tarot-app");
   app.use("/tarot-app", express.static(tarotAppDir, { index: "index.html" }));
 
   // tRPC API
