@@ -14,6 +14,7 @@ import BudgetApp from "./pages/BudgetApp";
 import TarotApp from "./pages/TarotApp";
 import RedBullProject from "./pages/RedBullProject";
 import KeyboardProject from "./pages/KeyboardProject";
+import JellyFlowerProject from "./pages/JellyFlowerProject";
 
 
 function Router() {
@@ -28,6 +29,7 @@ function Router() {
       <Route path={"/tarot-arcana"} component={TarotApp} />
       <Route path={"/product-design/redbull"} component={RedBullProject} />
       <Route path={"/product-design/keyboard"} component={KeyboardProject} />
+      <Route path={"/3d-motion/jellyflower"} component={JellyFlowerProject} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

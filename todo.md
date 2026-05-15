@@ -28,3 +28,4 @@
 - [x] Added /product-design/keyboard route to App.tsx
 - [x] Removed all placeholder project cards from ProductDesign, UIDesign, and ThreeDMotion pages
 - [x] Fixed tarot-app path resolution: changed import.meta.url to process.cwd() so /tarot-app/ route works in production (not just dev)
+- [x] Add Jelly Flower project to 3D & Motion section (video hero, same layout as Red Bull/Keyboard)
