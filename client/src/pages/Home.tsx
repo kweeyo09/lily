@@ -37,7 +37,7 @@ const FLOWER_URLS = [
 
 // Display only 3 flowers with new names (keep all GLBs for later)
 const FLOWER_NAMES = ['百合', '花烛', '石榴花'];
-const FLOWER_EN    = ['UI design', '3D & motion', 'Product design'];
+const FLOWER_EN    = ['UI/UX design', 'Product design', '3D & Motion'];
 
 // Fallback colours if texture fails
 const FLOWER_FALLBACK: [number,number,number][] = [
@@ -527,7 +527,7 @@ export default function Home() {
     renderer.domElement.addEventListener('touchend', onTouchEnd, { passive: true });
 
     /* ── CANVAS CLICK / TAP: scatter particles ── */
-    const portfolioRoutes = ['/ui-design', '/3d-motion', '/product-design'];
+    const portfolioRoutes = ['/ui-design', '/product-design', '/3d-motion'];
     const onCanvasClick = () => {
       const f = flowers[activeIdx];
       if (f.targetProgress > 0.5) {
