@@ -9,12 +9,14 @@
  *   3 石榴花 (Pomegranate) pomegranate.glb
  *   4 虞美人 (Poppy)       poppy.glb
  *
- * Gesture map:
- *   👈 Point left / 👉 Point right  → cycle between flowers
- *   🤏 Pinch             → select / focus the current flower
- *   ✋ Open palm         → scatter selected flower's particles
- *   ✊ Fist              → gather particles back
- *   Space bar / ← →   → keyboard fallback
+ * Gesture map (easter egg — hidden camera mode):
+ *   ✋ Open palm / fist open  → scatter active flower particles
+ *   ✊ Closed fist            → gather particles back
+ *   👈 Point left             → cycle left
+ *   👉 Point right            → cycle right
+ *
+ * Keyboard fallback:
+ *   Space bar / ← →   → scatter / cycle
  *
  * Particle colour: centroid UV sampling from each triangle's texture atlas
  * (avoids UV island seam bleed that causes wrong colours).
@@ -317,6 +319,114 @@ async function buildParticles(
 
   return { geo };
 }
+
+/* ── MEDIAPIPE GESTURE RECOGNISER (lazy ES module CDN load) ──────── */
+// Gesture names returned by MediaPipe GestureRecognizer
+const GESTURE_OPEN_PALM = 'Open_Palm';
+const GESTURE_CLOSED    = 'Closed_Fist';
+// MediaPipe also returns: Pointing_Up, Thumb_Up, Thumb_Down, Victory, ILoveYou
+
+type GestureCallback = (gesture: string, wristX: number) => void;
+
+class HandTracker {
+  private video: HTMLVideoElement | null = null;
+  private recognizer: any = null;
+  private stream: MediaStream | null = null;
+  private running = false;
+  private onGesture: GestureCallback;
+  private lastGesture = '';
+  private lastGestureTime = 0;
+  private COOLDOWN_MS = 600;
+
+  constructor(onGesture: GestureCallback) {
+    this.onGesture = onGesture;
+  }
+
+  async start(): Promise<void> {
+    // Dynamically import MediaPipe tasks-vision as an ES module from CDN
+    // Using Function constructor to bypass TypeScript's static import resolution
+    const mp = await (new Function('url', 'return import(url)'))(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs'
+    ) as any;
+
+    const { FilesetResolver, GestureRecognizer } = mp;
+
+    const vision = await FilesetResolver.forVisionTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm'
+    );
+
+    this.recognizer = await GestureRecognizer.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: 'https://storage.googleapis.com/mediapipe-tasks/gesture_recognizer/gesture_recognizer.task',
+        delegate: 'GPU',
+      },
+      runningMode: 'VIDEO',
+      numHands: 1,
+    });
+
+    // Get camera stream — no preview shown, just used for inference
+    this.stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
+    this.video = document.createElement('video');
+    this.video.srcObject = this.stream;
+    this.video.setAttribute('playsinline', 'true');
+    this.video.muted = true;
+    await this.video.play();
+
+    this.running = true;
+    this.loop();
+  }
+
+  private loop() {
+    if (!this.running || !this.recognizer || !this.video) return;
+
+    const now = performance.now();
+    try {
+      const results = this.recognizer.recognizeForVideo(this.video, now);
+      if (results.gestures && results.gestures.length > 0) {
+        const topGesture = results.gestures[0][0];
+        const gestureName = topGesture.categoryName as string;
+        const score = topGesture.score as number;
+
+        // Get wrist X position (landmark 0) to determine left/right pointing
+        // Note: webcam image is mirrored, so x=0 is user's right, x=1 is user's left
+        let wristX = 0.5;
+        if (results.landmarks && results.landmarks.length > 0) {
+          wristX = results.landmarks[0][0].x;
+        }
+
+        if (score > 0.72) {
+          const timeSinceLast = now - this.lastGestureTime;
+          if (gestureName !== this.lastGesture || timeSinceLast > this.COOLDOWN_MS) {
+            this.lastGesture = gestureName;
+            this.lastGestureTime = now;
+            this.onGesture(gestureName, wristX);
+          }
+        }
+      }
+    } catch (_) {
+      // Silently ignore inference errors
+    }
+
+    requestAnimationFrame(() => this.loop());
+  }
+
+  stop() {
+    this.running = false;
+    if (this.stream) {
+      this.stream.getTracks().forEach(t => t.stop());
+      this.stream = null;
+    }
+    if (this.video) {
+      this.video.srcObject = null;
+      this.video = null;
+    }
+    if (this.recognizer) {
+      try { this.recognizer.close(); } catch (_) {}
+      this.recognizer = null;
+    }
+  }
+}
+
 /* ── MAIN COMPONENT ─────────────────────────────────────────────── */
 export default function Home() {
   const [showResume, setShowResume] = useState(false);
@@ -324,6 +434,77 @@ export default function Home() {
   const labelRef      = useRef<HTMLDivElement>(null);
   const loadRef       = useRef<HTMLDivElement>(null);
   const loadTxtRef    = useRef<HTMLDivElement>(null);
+
+  // Hand mode state
+  const [handMode, setHandMode] = useState<'off' | 'loading' | 'active' | 'error'>('off');
+  const [gestureHint, setGestureHint] = useState('');
+  const handTrackerRef = useRef<HandTracker | null>(null);
+
+  // Shared refs so gesture callbacks can drive the Three.js state
+  // (the useEffect closure captures these refs, not stale state)
+  const gestureCommandRef = useRef<{ cmd: 'scatter' | 'gather' | 'left' | 'right' | null }>({ cmd: null });
+
+  const toggleHandMode = async () => {
+    if (handMode === 'active') {
+      // Turn off
+      handTrackerRef.current?.stop();
+      handTrackerRef.current = null;
+      setHandMode('off');
+      setGestureHint('');
+      return;
+    }
+    if (handMode === 'loading') return;
+
+    setHandMode('loading');
+    setGestureHint('Requesting camera…');
+
+    try {
+      const tracker = new HandTracker((gesture, wristX) => {
+        // Map MediaPipe gesture names to commands
+        // wristX is mirrored: 0 = user's right side of frame, 1 = user's left
+        if (gesture === GESTURE_OPEN_PALM) {
+          gestureCommandRef.current.cmd = 'scatter';
+          setGestureHint('✋ scatter');
+        } else if (gesture === GESTURE_CLOSED) {
+          gestureCommandRef.current.cmd = 'gather';
+          setGestureHint('✊ gather');
+        } else if (gesture === 'Pointing_Up' || gesture === 'Victory') {
+          // Use wrist X to decide direction (camera is mirrored)
+          if (wristX < 0.4) {
+            gestureCommandRef.current.cmd = 'right';
+            setGestureHint('👉 next');
+          } else if (wristX > 0.6) {
+            gestureCommandRef.current.cmd = 'left';
+            setGestureHint('👈 prev');
+          }
+        } else if (gesture === 'Thumb_Up') {
+          gestureCommandRef.current.cmd = 'scatter';
+          setGestureHint('👍 scatter');
+        } else if (gesture === 'Thumb_Down') {
+          gestureCommandRef.current.cmd = 'gather';
+          setGestureHint('👎 gather');
+        }
+      });
+
+      await tracker.start();
+      handTrackerRef.current = tracker;
+      setHandMode('active');
+      setGestureHint('Hand mode on ✋');
+      setTimeout(() => setGestureHint(''), 2000);
+    } catch (err) {
+      console.error('[HandTracker] Failed to start:', err);
+      setHandMode('error');
+      setGestureHint('Camera access denied');
+      setTimeout(() => { setHandMode('off'); setGestureHint(''); }, 3000);
+    }
+  };
+
+  // Cleanup tracker on unmount
+  useEffect(() => {
+    return () => {
+      handTrackerRef.current?.stop();
+    };
+  }, []);
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -454,7 +635,6 @@ export default function Home() {
       controls.enabled = false;
       setTimeout(() => { controls.enabled = true; }, 1200);
       updateLabel();
-
     };
 
     /* ── SELECT / DESELECT ACTIVE FLOWER ── */
@@ -467,10 +647,6 @@ export default function Home() {
       flowers[activeIdx].targetProgress = 0;
       updateLabel();
     };
-
-
-
-
 
     /* ── KEYBOARD FALLBACK ── */
     const onKey = (e: KeyboardEvent) => {
@@ -556,6 +732,21 @@ export default function Home() {
       const dt   = clock.getDelta();
       const time = clock.getElapsedTime();
 
+      // ── Process gesture commands from HandTracker ──
+      const cmd = gestureCommandRef.current.cmd;
+      if (cmd) {
+        gestureCommandRef.current.cmd = null;
+        if (cmd === 'scatter') {
+          flowers[activeIdx].targetProgress = 1;
+        } else if (cmd === 'gather') {
+          flowers[activeIdx].targetProgress = 0;
+        } else if (cmd === 'left') {
+          switchFlower('left');
+        } else if (cmd === 'right') {
+          switchFlower('right');
+        }
+      }
+
       // Smooth camera pan
       const panLerp = 1 - Math.pow(0.04, dt);
       camCurrentX += (camTargetX - camCurrentX) * panLerp;
@@ -612,7 +803,17 @@ export default function Home() {
       {/* Three.js canvas mount */}
       <div ref={mountRef} style={{ position: 'absolute', inset: 0 }} />
 
-
+      {/* Loading overlay */}
+      <div ref={loadRef} style={{
+        position: 'absolute', inset: 0, background: '#000',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        zIndex: 100,
+      }}>
+        <div ref={loadTxtRef} style={{
+          color: 'rgba(255,255,255,0.5)', fontFamily: "'Barlow', sans-serif",
+          fontSize: '0.8rem', letterSpacing: '0.15em',
+        }}>Loading…</div>
+      </div>
 
       {/* Flower label */}
       <div ref={labelRef} style={{
@@ -622,8 +823,6 @@ export default function Home() {
         textAlign: 'center', pointerEvents: 'none', userSelect: 'none',
         transition: 'opacity 0.3s',
       }} />
-
-
 
       {/* Centered bottom instructions - responsive */}
       <div style={{
@@ -661,11 +860,19 @@ export default function Home() {
           Click / tap to scatter
         </div>
       </div>
-      
+
       <style>{`
         @keyframes scroll-bounce {
           0%, 100% { transform: translateY(0); opacity: 1; }
           50% { transform: translateY(6px); opacity: 0.3; }
+        }
+        @keyframes hand-pulse {
+          0%, 100% { opacity: 0.35; transform: scale(1); }
+          50% { opacity: 0.55; transform: scale(1.08); }
+        }
+        @keyframes hand-active-glow {
+          0%, 100% { box-shadow: 0 0 8px rgba(255,255,255,0.15); }
+          50% { box-shadow: 0 0 16px rgba(255,255,255,0.3); }
         }
       `}</style>
 
@@ -726,7 +933,7 @@ export default function Home() {
         </button>
       </div>
 
-      {/* NEXT button - bottom right - visible on all screens */}
+      {/* NEXT button - bottom right */}
       <button
         className="liquid-glass-strong"
         onClick={() => {
@@ -758,6 +965,65 @@ export default function Home() {
       >
          NEXT →
       </button>
+
+      {/* ── HAND MODE EASTER EGG BUTTON ── bottom-left corner ── */}
+      <div style={{
+        position: 'fixed',
+        bottom: 'max(32px, env(safe-area-inset-bottom))',
+        left: 'max(32px, env(safe-area-inset-left))',
+        zIndex: 1000,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        gap: '8px',
+      }}>
+        {/* Gesture hint label — only shown when active */}
+        {gestureHint && (
+          <div style={{
+            color: 'rgba(255,255,255,0.6)',
+            fontFamily: "'Barlow', sans-serif",
+            fontSize: '0.7rem',
+            letterSpacing: '0.12em',
+            fontWeight: '300',
+            paddingLeft: '2px',
+            transition: 'opacity 0.3s',
+          }}>
+            {gestureHint}
+          </div>
+        )}
+
+        {/* The easter egg button itself */}
+        <button
+          onClick={toggleHandMode}
+          title={handMode === 'active' ? 'Disable hand control' : 'Enable hand control (easter egg)'}
+          style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '50%',
+            border: handMode === 'active'
+              ? '1px solid rgba(255,255,255,0.4)'
+              : '1px solid rgba(255,255,255,0.12)',
+            background: handMode === 'active'
+              ? 'rgba(255,255,255,0.08)'
+              : 'rgba(255,255,255,0.03)',
+            color: '#fff',
+            fontSize: '1rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.3s ease',
+            animation: handMode === 'off'
+              ? 'hand-pulse 4s ease-in-out infinite'
+              : handMode === 'active'
+              ? 'hand-active-glow 2s ease-in-out infinite'
+              : 'none',
+            opacity: handMode === 'loading' ? 0.5 : 1,
+          }}
+        >
+          {handMode === 'loading' ? '⏳' : handMode === 'error' ? '⚠️' : '✋'}
+        </button>
+      </div>
 
       {/* Resume PDF Modal */}
       {showResume && <ResumeModal onClose={() => setShowResume(false)} />}
