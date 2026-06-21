@@ -9,6 +9,10 @@ const BUDGET_APP_SCREENSHOT =
 
 const TAROT_THUMBNAIL = '/manus-storage/01-hero-spread_21519680.png';
 
+// Limelight is a Next.js app that needs a Node runtime, so it stays deployed
+// on Vercel and this card links out to it. Replace with your real deploy URL.
+const LIMELIGHT_URL = 'https://theatreboxd.vercel.app/';
+
 
 interface Project {
   id: number;
@@ -30,7 +34,7 @@ const projects: Project[] = [
     tags: ['Mobile UI', 'Design System', 'Finance'],
     image: BUDGET_APP_SCREENSHOT,
     link: '/budget-app',
-  internal: true,
+    internal: true,
   },
   {
     id: 2,
@@ -41,6 +45,15 @@ const projects: Project[] = [
     image: TAROT_THUMBNAIL,
     link: '/tarot-arcana',
     internal: true,
+  },
+  {
+    id: 3,
+    title: 'Limelight',
+    description:
+      'A theatre log for West End shows, presented as draggable ticket stubs on a virtual curtained stage with live search. Built in Next.js with custom Bodoni Moda + Spline Sans Mono typography.',
+    tags: ['Interactive UI', 'Web App', 'Theatre'],
+    link: LIMELIGHT_URL,
+    // external: opens in a new tab (no `internal` flag)
   },
 
 ];
