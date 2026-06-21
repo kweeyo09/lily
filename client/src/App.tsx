@@ -15,6 +15,7 @@ import TarotApp from "./pages/TarotApp";
 import RedBullProject from "./pages/RedBullProject";
 import KeyboardProject from "./pages/KeyboardProject";
 import JellyFlowerProject from "./pages/JellyFlowerProject";
+import Limelight from "./pages/Limelight";
 
 
 function Router() {
@@ -27,6 +28,7 @@ function Router() {
       <Route path={"/product-design"} component={ProductDesign} />
       <Route path={"/budget-app"} component={BudgetApp} />
       <Route path={"/tarot-arcana"} component={TarotApp} />
+      <Route path={"/limelight"} component={Limelight} />
       <Route path={"/product-design/redbull"} component={RedBullProject} />
       <Route path={"/product-design/keyboard"} component={KeyboardProject} />
       <Route path={"/3d-motion/jellyflower"} component={JellyFlowerProject} />
