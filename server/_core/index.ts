@@ -1,11 +1,8 @@
 import "dotenv/config";
-import path from "path";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
-import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -35,17 +32,6 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  registerStorageProxy(app);
-  registerOAuthRoutes(app);
-
-  // Serve the original tarot app export under /tarot-app/
-  // The export has index.html + assets/ folder with relative paths (./assets/...)
-  // We serve the whole directory as static files BEFORE Vite middleware so
-  // Vite never intercepts these routes.
-  // Use process.cwd() (always the project root) so the path works in both
-  // dev (tsx watch server/_core/index.ts) and production (dist/index.js).
-  const tarotAppDir = path.resolve(process.cwd(), "server/tarot-app");
-  app.use("/tarot-app", express.static(tarotAppDir, { index: "index.html" }));
 
   // tRPC API
   app.use(

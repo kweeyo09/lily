@@ -5,7 +5,7 @@
 
 import { useLocation } from 'wouter';
 
-const JELLYFLOWER_VIDEO = '/manus-storage/jellyflower-v2_03e237d7.mp4';
+const JELLYFLOWER_VIDEO = '/assets/jellyflower-v2_03e237d7.mp4';
 
 export default function JellyFlowerProject() {
   const [, setLocation] = useLocation();

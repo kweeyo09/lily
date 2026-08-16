@@ -5,10 +5,10 @@
 
 import { useLocation } from 'wouter';
 
-const KEYBOARD_VIDEO = '/manus-storage/productanimation_bd4c3604.mp4';
-const KEYBOARD_IMG_1 = '/manus-storage/0064_b9b87608.png'; // exploded view
-const KEYBOARD_IMG_2 = '/manus-storage/0001_0dc6c9dd.png'; // floating keyboards
-const KEYBOARD_IMG_3 = '/manus-storage/0119_ea94796b.png'; // top-down single keyboard
+const KEYBOARD_VIDEO = '/assets/productanimation_bd4c3604.mp4';
+const KEYBOARD_IMG_1 = '/assets/0064_b9b87608.png'; // exploded view
+const KEYBOARD_IMG_2 = '/assets/0001_0dc6c9dd.png'; // floating keyboards
+const KEYBOARD_IMG_3 = '/assets/0119_ea94796b.png'; // top-down single keyboard
 
 export default function KeyboardProject() {
   const [, setLocation] = useLocation();

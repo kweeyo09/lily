@@ -30,11 +30,11 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 /* ── CDN URLS ──────────────────────────────────────────────────── */
 const FLOWER_URLS = [
-  'https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/baihe_4774bde5.glb',
-  'https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/anthurium_f0a39f13.glb',
-  'https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/lotus_f4ee305b.glb',
-  'https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/pomegranate_59701679.glb',
-  'https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/poppy_c3f1f0b0.glb',
+  '/assets/baihe_4774bde5.glb',
+  '/assets/anthurium_f0a39f13.glb',
+  '/assets/lotus_f4ee305b.glb',
+  '/assets/pomegranate_59701679.glb',
+  '/assets/poppy_c3f1f0b0.glb',
 ];
 
 // Display only 3 flowers with new names (keep all GLBs for later)
@@ -882,7 +882,7 @@ export default function Home() {
         pointerEvents: 'none',
       }}>
         <img
-          src="https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/kixiz-logo_ce4a8d4a.png"
+          src="/assets/kixiz-logo_ce4a8d4a.png"
           alt="KIXIZ Studio"
           style={{
             width: 'clamp(40px, 8vw, 60px)',

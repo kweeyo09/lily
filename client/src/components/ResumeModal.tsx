@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 
-const PDF_URL = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/KZCV26_f175d443.pdf';
-const VIEWER_URL = `https://docs.google.com/viewer?url=${encodeURIComponent(PDF_URL)}&embedded=true`;
+// Self-hosted PDF, embedded directly (browsers render PDFs natively).
+// Appended params hide the native toolbar for a cleaner modal.
+const PDF_URL = '/assets/KZCV26_f175d443.pdf#toolbar=0&navpanes=0';
 
 interface ResumeModalProps {
   onClose: () => void;
@@ -63,7 +64,7 @@ export default function ResumeModal({ onClose }: ResumeModalProps) {
         }}
       >
         <iframe
-          src={VIEWER_URL}
+          src={PDF_URL}
           title="Kiki Zhang Resume"
           width="100%"
           height="100%"

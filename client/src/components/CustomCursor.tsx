@@ -10,7 +10,7 @@
 import { useEffect, useRef } from "react";
 
 const FLOWER_URL =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/plumeria-cursor-FHeEbDTnJ2btCLPGf5qFqe.png";
+  "/assets/plumeria-cursor-FHeEbDTnJ2btCLPGf5qFqe.png";
 
 export default function CustomCursor() {
   const cursorRef = useRef<HTMLDivElement>(null);

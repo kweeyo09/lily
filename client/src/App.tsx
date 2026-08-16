@@ -11,7 +11,6 @@ import ThreeDMotion from "./pages/ThreeDMotion";
 import ProductDesign from "./pages/ProductDesign";
 import Loading from "./pages/Loading";
 import BudgetApp from "./pages/BudgetApp";
-import TarotApp from "./pages/TarotApp";
 import RedBullProject from "./pages/RedBullProject";
 import KeyboardProject from "./pages/KeyboardProject";
 import JellyFlowerProject from "./pages/JellyFlowerProject";
@@ -27,7 +26,6 @@ function Router() {
       <Route path={"/3d-motion"} component={ThreeDMotion} />
       <Route path={"/product-design"} component={ProductDesign} />
       <Route path={"/budget-app"} component={BudgetApp} />
-      <Route path={"/tarot-arcana"} component={TarotApp} />
       <Route path={"/limelight"} component={Limelight} />
       <Route path={"/product-design/redbull"} component={RedBullProject} />
       <Route path={"/product-design/keyboard"} component={KeyboardProject} />

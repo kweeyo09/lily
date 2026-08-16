@@ -1,6 +1,6 @@
 import { useLocation } from 'wouter';
 
-const JELLYFLOWER_THUMB = '/manus-storage/jellyflower_bf91d6d2.mp4';
+const JELLYFLOWER_THUMB = '/assets/jellyflower_bf91d6d2.mp4';
 
 export default function ThreeDMotion() {
   const [, setLocation] = useLocation();

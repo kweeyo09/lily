@@ -5,10 +5,7 @@ import { useLocation } from 'wouter';
 // First card: Budget App (real project), rest are placeholders
 
 const BUDGET_APP_SCREENSHOT =
-  'https://d2xsxph8kpxj0f.cloudfront.net/310519663487115720/ejiFnRLP6xDAMjzum8YmMk/budget-app-full_9f9cebd2.png';
-
-const TAROT_THUMBNAIL = '/manus-storage/01-hero-spread_21519680.png';
-
+  '/assets/budget-app-full_9f9cebd2.png';
 
 interface Project {
   id: number;
@@ -34,16 +31,6 @@ const projects: Project[] = [
   },
   {
     id: 2,
-    title: 'Tarot Arcana',
-    description:
-      'An immersive tarot card experience featuring the complete 22 Major Arcana. Hover the arc spread to draw a card, flip to reveal its meaning, or browse the full deck with upright and reversed interpretations.',
-    tags: ['Interactive UI', 'Dark Design', 'Mystical'],
-    image: TAROT_THUMBNAIL,
-    link: '/tarot-arcana',
-    internal: true,
-  },
-  {
-    id: 3,
     title: 'Limelight',
     description:
       'A theatre log for West End shows, presented as draggable ticket stubs on a virtual curtained stage with live search. Built in Next.js with custom Bodoni Moda + Spline Sans Mono typography.',
